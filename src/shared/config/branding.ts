@@ -14,7 +14,7 @@ export const BOT_ICON =
 
 // Bot messages
 const CODING_RESPONSE =
-  "Thanks for your question :clap:, if someone gives you an answer it would be great if you thanked them with a :white_check_mark: in response. This response will earn you both points for special roles on this server.";
+  "Thanks for your question, if someone gives you an answer it would be great if you upvoted them with a :arrow_up_small: in response.";
 
 export function getThreadWelcomeMessage(
   boardType: string,

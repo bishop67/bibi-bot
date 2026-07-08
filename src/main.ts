@@ -33,7 +33,7 @@ export const bot = new Client({
     Partials.User,
   ],
   silent: true,
-  botGuilds: ["693908458986143824", "1314599700657340436"],
+  botGuilds: [process.env.GUILD_ID!],
 });
 
 bot.once("clientReady", async () => {

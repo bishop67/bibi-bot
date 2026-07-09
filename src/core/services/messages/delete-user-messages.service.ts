@@ -19,7 +19,7 @@ import {
 import { error, log } from "node:console";
 
 const CHANNEL_CONCURRENCY = 3;
-const MAX_DELETE_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+const MAX_DELETE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],

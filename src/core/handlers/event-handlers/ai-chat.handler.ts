@@ -88,7 +88,7 @@ function shouldRespond(message: Message, client: Client): boolean {
   const mention = new RegExp(`^<@!?${client.user?.id}>`);
   const isMention = mention.test(message.content);
   const isRoleMention = message.mentions.roles.some(
-    (role) => role.name.toLowerCase() === "coding.global",
+    (role) => role.name.toLowerCase() === "bibi",
   );
   const isReply = isReplyToBot(message, client);
   const isCodingGlobal = CODING_GLOBAL_PATTERN.test(

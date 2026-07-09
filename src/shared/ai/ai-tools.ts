@@ -20,7 +20,7 @@ async function searchGifs(query: string, limit: number = 5): Promise<string[]> {
       per_page: limit.toString(),
       content_filter: "off",
       format_filter: "gif",
-      customer_id: "coding-global-bot",
+      customer_id: "bibi-bot",
     });
 
     const response = await fetch(`${KLIPY_BASE_URL}?${params}`);

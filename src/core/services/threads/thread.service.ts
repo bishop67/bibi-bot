@@ -181,6 +181,7 @@ export class ThreadService {
   static async upsertThreadMessage(message: Message): Promise<void> {
     const channel = message.channel;
     if (!channel.isThread()) return;
+    if (message.author.bot) return;
 
     const threadId = channel.id;
     const guildId = message.guildId;

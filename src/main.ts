@@ -2,6 +2,7 @@ import "@dotenvx/dotenvx/config";
 
 import { AttachmentRefreshQueueService } from "@/core/services/attachments/attachment-refresh-queue.service";
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
+import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
@@ -41,7 +42,21 @@ bot.once("clientReady", async () => {
   process.env.DOCKER && MemberUpdateQueueService.start();
   process.env.DOCKER && AttachmentRefreshQueueService.start();
   botLogger.info("Bot started", { clientId: bot.user?.id });
+
+
+  for (const guild of bot.guilds.cache.values()) {
+    const members = await guild.members.fetch();
+    for (const member of members.values()) {
+      if (member.user.bot) continue;
+      await MembersService.upsertDbMember(member, "join");
+    }
+    botLogger.info(`Backfilled members for guild`, {
+      guildId: guild.id,
+      count: members.size,
+    });
+  }
 });
+  
 
 bot.on("interactionCreate", (interaction) => {
   // Ignore DMs - only work in guild (server)

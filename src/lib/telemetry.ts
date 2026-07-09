@@ -56,5 +56,5 @@ export function getLogger(name: string) {
   };
 }
 
-export const botLogger = getLogger("coding-global-bot");
-export const apiLogger = getLogger("coding-global-bot-api");
+export const botLogger = getLogger("bibi-bot");
+export const apiLogger = getLogger("bibi-bot-api");

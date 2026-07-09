@@ -99,7 +99,7 @@ export class AiChatService {
 
   private static extractUserMessage(message: Message): string {
     const mentionPattern = new RegExp(`^<@[!&]?\\d+>\\s*`);
-    const codingGlobalPattern = /^coding\s?global/i;
+    const codingGlobalPattern = /^bibi/i;
 
     return message.content
       .replace(mentionPattern, "")

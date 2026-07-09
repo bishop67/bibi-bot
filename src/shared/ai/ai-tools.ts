@@ -163,6 +163,6 @@ export const searchMemeGifs = tool({
   },
 });
 
-export const CODING_GLOBAL_PATTERN = /^coding\s?global/i;
+export const CODING_GLOBAL_PATTERN = /^bibi/i;
 
 export const AI_TOOLS = { searchMemeGifs, gatherChannelContext };

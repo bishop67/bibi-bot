@@ -90,7 +90,7 @@ const main = async () => {
   await bot.login(token);
 
   bot.user?.setPresence({
-    activities: [{ name: ".gg/coding", type: ActivityType.Watching }],
+    activities: [{ name: "hex4", type: ActivityType.Watching }],
   });
 };
 

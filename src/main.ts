@@ -59,7 +59,7 @@ bot.once("clientReady", async () => {
         if (firstMember) {
           await MembersService.updateMemberCount(firstMember);
         }
-        
+
     } catch (err) {
       botLogger.error(`Backfill failed for guild`, {
         guildId: guild.id,
@@ -118,7 +118,7 @@ const main = async () => {
   await bot.login(token);
 
   bot.user?.setPresence({
-    activities: [{ name: "hex4", type: ActivityType.Watching }],
+    activities: [{ name: "HEX4", type: ActivityType.Watching }],
   });
 };
 

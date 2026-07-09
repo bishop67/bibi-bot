@@ -5,24 +5,30 @@ import { SpamDetectionService } from "@/core/services/spam/spam-detection.servic
 import { ThreadService } from "@/core/services/threads/thread.service";
 import { ConfigValidator } from "@/shared/config/validator";
 import { translate } from "@/shared/integrations/deepl";
+import { SPAM_EXEMPT_CHANNELS } from "@/shared/config/channels";
 import { Message, MessageType, TextChannel } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
 
 export async function handleMessageCreate(message: Message): Promise<void> {
-  const isSpam =
-    await SpamDetectionService.detectSpamFirstMessageWithAi(message);
-  if (isSpam) {
-    return;
-  }
+  const channelName = (message.channel as TextChannel)?.name ?? "";
+  const isSpamExemptChannel = SPAM_EXEMPT_CHANNELS.includes(channelName);
 
-  await DuplicateSpamService.checkDuplicateSpam(message);
+  if (!isSpamExemptChannel) {
+    const isSpam =
+      await SpamDetectionService.detectSpamFirstMessageWithAi(message);
+    if (isSpam) {
+      return;
+    }
+
+    await DuplicateSpamService.checkDuplicateSpam(message);
+  }
 
   await MessagesService.checkWarnings(message);
 
   await MessagesService.addMessageDb(message);
 
   await ThreadService.upsertThreadMessage(message);
-
+  
   await MessagesService.levelUpMessage(message);
 }
 

@@ -43,17 +43,23 @@ bot.once("clientReady", async () => {
   process.env.DOCKER && AttachmentRefreshQueueService.start();
   botLogger.info("Bot started", { clientId: bot.user?.id });
 
-
   for (const guild of bot.guilds.cache.values()) {
-    const members = await guild.members.fetch();
-    for (const member of members.values()) {
-      if (member.user.bot) continue;
-      await MembersService.upsertDbMember(member, "join");
+    try {
+      const members = await guild.members.fetch();
+      for (const member of members.values()) {
+        if (member.user.bot) continue;
+        await MembersService.upsertDbMember(member, "join");
+      }
+      botLogger.info(`Backfilled members for guild`, {
+        guildId: guild.id,
+        count: members.size,
+      });
+    } catch (err) {
+      botLogger.error(`Backfill failed for guild`, {
+        guildId: guild.id,
+        error: String(err),
+      });
     }
-    botLogger.info(`Backfilled members for guild`, {
-      guildId: guild.id,
-      count: members.size,
-    });
   }
 });
   

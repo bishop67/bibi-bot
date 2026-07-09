@@ -67,3 +67,8 @@ export const LEAD_DEV =
 
 export const TECH_LEAD =
   LEVEL_ROLES.find((r) => r.toLowerCase() === "tech lead!") || LEVEL_ROLES?.[8];
+
+
+  // OG role privileges
+export const SPAM_EXEMPT_ROLES =
+  process.env.SPAM_EXEMPT_ROLES?.split(",").map((s) => s.trim()) || [];

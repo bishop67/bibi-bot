@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { Attachment, Message } from "discord.js";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { SPAM_EXEMPT_ROLES } from "@/shared/config/roles";
 import {
   CHANNEL_JAIL_THRESHOLD,
   CHANNEL_SPAM_WINDOW_MS,
@@ -15,7 +16,9 @@ export class DuplicateSpamService {
 
   static async checkDuplicateSpam(message: Message): Promise<boolean> {
     if (message.author.bot) return false;
-
+    if (message.member?.roles.cache.some((r) => SPAM_EXEMPT_ROLES.includes(r.name))) {
+    return false;
+  }
     const content = message.content.trim();
     const attachments = Array.from(message.attachments.values());
 

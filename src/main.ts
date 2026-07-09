@@ -54,6 +54,12 @@ bot.once("clientReady", async () => {
         guildId: guild.id,
         count: members.size,
       });
+
+      const firstMember = members.first();
+        if (firstMember) {
+          await MembersService.updateMemberCount(firstMember);
+        }
+        
     } catch (err) {
       botLogger.error(`Backfill failed for guild`, {
         guildId: guild.id,
@@ -62,7 +68,8 @@ bot.once("clientReady", async () => {
     }
   }
 });
-  
+
+
 
 bot.on("interactionCreate", (interaction) => {
   // Ignore DMs - only work in guild (server)

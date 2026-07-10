@@ -1,22 +1,3 @@
-<p align="center">
-  <a href="https://github.com/0-don/coding.global-bot">
-    <img src="https://raw.githubusercontent.com/0-don/coding.global-web/master/public/images/logo.gif" alt="Logo" width="80" height="80">
-  </a>
-
-  <h3 align="center">coding.global Discord Bot!</h3>
-
-  <p align="center">
-    The official bot for the <a href="https://discord.gg/coding">discord.gg/coding</a> Discord Server.
-    <br />
-    <a href="#about-the-bot"><strong>» Explore the docs</strong></a>
-    <br />
-    ·
-    <a href="https://github.com/0-don/coding.global-bot/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/0-don/coding.global-bot/issues">Request Feature</a>
-  </p>
-</p>
-
 ## Setup
 
 ### Prerequisites

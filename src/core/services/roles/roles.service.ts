@@ -144,6 +144,44 @@ export class RolesService {
     const oldRoles = args.oldRoles.map((role) => role.name);
     const newAddedRole = newRoles.find((role) => !oldRoles.includes(role))!;
 
+
+    // Enforce jail/voice-only persistence even when an unrelated role gets added later
+    // (e.g. Discord Onboarding re-applying roles after the member already finished onboarding)
+    const restrictedRoleNames = [JAIL, VOICE_ONLY];
+    const dbRestrictedRole = args.memberDbRoles.find(
+      (dbRole) =>
+        dbRole.roleId ===
+        args.guildRoles.find((role) => restrictedRoleNames.includes(role.name))?.id,
+    );
+
+    if (dbRestrictedRole && newAddedRole !== JAIL && newAddedRole !== VOICE_ONLY) {
+      const restrictedRoleName = args.guildRoles.find(
+        (role) => role.id === dbRestrictedRole.roleId,
+      )?.name;
+
+      for (const role of args.newMember.roles.cache.values()) {
+        if (role.name === restrictedRoleName) continue;
+        await args.newMember.roles.remove(role).catch(() => {});
+      }
+
+      if (
+        !args.newMember.roles.cache.some((role) => role.name === restrictedRoleName)
+      ) {
+        args.newMember.roles.add(dbRestrictedRole.roleId).catch(() => {});
+      }
+
+      await db.delete(memberRole).where(
+        and(
+          eq(memberRole.memberId, args.newMember.id),
+          eq(memberRole.guildId, args.newMember.guild.id),
+          ne(memberRole.roleId, dbRestrictedRole.roleId),
+        ),
+      );
+
+      return;
+    }
+
+
     // Handle JAIL or VOICE_ONLY role addition
     if (newAddedRole === JAIL || newAddedRole === VOICE_ONLY) {
       const restrictedRole = args.newMember.roles.cache.find(

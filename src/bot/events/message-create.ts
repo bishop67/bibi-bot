@@ -16,7 +16,7 @@ export class MessageCreate {
     await handleMessageCreate(message);
   }
 
-  @SimpleCommand({ aliases: [""], prefix: ["✅", ":white_check_mark:"] })
+  @SimpleCommand({ aliases: [""], prefix: ["🔼", ":arrow_up_small:"] })
   async checkThreadHelpLike(command: SimpleCommandMessage) {
     await handleCheckThreadHelpLike(command);
   }

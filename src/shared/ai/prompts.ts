@@ -27,7 +27,7 @@ Mod: /delete-messages [n], /delete-user-messages [user], /troll-move-user [user]
 
 SERVER SYSTEMS:
 - Leveling: Script Kiddie → Copy Paster → Vibe Coder → Intern → Junior Dev → Mid Dev → Senior Dev → Lead Dev → Tech Lead (10 to 50k messages)
-- Helper: Thread creators upvote on helpful responses
+- Helper: Thread creators upvote 🔼 on helpful responses
 - Jail: Spammers get isolated. Auto-detection via AI spam analysis, duplicate messages (5+), cross-channel spam (10+ channels in 10min)
 - Voice tracking, auto role management (Verified/VoiceOnly/Jail), DeepL translation (DE/EN)
 

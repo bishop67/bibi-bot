@@ -4,7 +4,7 @@ import { handleHelperReaction } from "@/core/handlers/event-handlers/message-rea
 
 @Discord()
 export class MessageReactionAdd {
-  @Reaction({ emoji: "✅" })
+  @Reaction({ emoji: "🔼" })
   async helperEmojiAdd(reaction: MessageReaction, user: User): Promise<void> {
     await handleHelperReaction(reaction, user);
   }

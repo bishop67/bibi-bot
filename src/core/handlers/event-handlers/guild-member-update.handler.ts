@@ -11,6 +11,16 @@ export async function handleGuildMemberUpdate(
   oldMember: GuildMember | PartialGuildMember,
   newMember: GuildMember,
 ): Promise<void> {
+    console.log("[DEBUG guildMemberUpdate]", {
+    memberId: newMember.id,
+    oldPending: oldMember.pending,
+    newPending: newMember.pending,
+    oldFlags: oldMember.flags?.bitfield,
+    newFlags: newMember.flags?.bitfield,
+    oldRoleNames: oldMember.roles.cache.map((r) => r.name),
+    newRoleNames: newMember.roles.cache.map((r) => r.name),
+  });
+  
   const guildRoles = newMember.guild.roles.cache;
   const memberDbRoles = await db.query.memberRole.findMany({
     where: and(

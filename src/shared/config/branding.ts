@@ -14,7 +14,7 @@ export const BOT_ICON =
 
 // Bot messages
 const CODING_RESPONSE =
-  "🔼 Found this helpful? React with 🔼 to give the helper credit.";
+  "Found this helpful? React with 🔼 to give the helper credit.";
 
 export function getThreadWelcomeMessage(
   boardType: string,

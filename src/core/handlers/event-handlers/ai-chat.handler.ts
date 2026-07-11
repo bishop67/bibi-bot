@@ -1,6 +1,6 @@
 import { AiChatService } from "@/core/services/ai/ai-chat.service";
 import { PrivacyService } from "@/core/services/privacy/privacy.service";
-import { AI_TOOLS, CODING_GLOBAL_PATTERN } from "@/shared/ai/ai-tools";
+import { AI_TOOLS, BIBI_PATTERN } from "@/shared/ai/ai-tools";
 import { ConfigValidator } from "@/shared/config/validator";
 import { error } from "console";
 import { Message, MessageFlags, TextChannel } from "discord.js";
@@ -91,7 +91,7 @@ function shouldRespond(message: Message, client: Client): boolean {
     (role) => role.name.toLowerCase() === "bibi",
   );
   const isReply = isReplyToBot(message, client);
-  const isBotMention = CODING_GLOBAL_PATTERN.test(
+  const isBotMention = BIBI_PATTERN.test(
     message.content.toLowerCase(),
   );
 
@@ -111,7 +111,7 @@ function isEmptyMessage(message: Message): boolean {
   const mention = new RegExp(`^<@[!&]?\\d+>\\s*`);
   const userMsg = message.content
     .replace(mention, "")
-    .replace(CODING_GLOBAL_PATTERN, "")
+    .replace(BIBI_PATTERN, "")
     .trim();
 
   return (

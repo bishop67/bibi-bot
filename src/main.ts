@@ -33,7 +33,7 @@ export const bot = new Client({
     Partials.GuildScheduledEvent,
     Partials.User,
   ],
-  silent: true,
+  silent: false,
   botGuilds: process.env.GUILD_ID!.split(",").map((s) => s.trim()),
 });
 
@@ -101,6 +101,14 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
 process.on("SIGINT", async () => {
   botLogger.info("Received SIGINT, shutting down");
   MemberUpdateQueueService.stop();
@@ -130,4 +138,4 @@ setInterval(
   300000,
 );
 
-main();
+main().catch((err) => console.error("MAIN FAILED:", err));

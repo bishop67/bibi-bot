@@ -21,17 +21,15 @@ export function getThreadWelcomeMessage(
   threadId: string,
   threadName: string,
 ): string {
-  const link = `[${threadName}](https://coding-global.com/${threadId})`;
-  const includeLink = false;
 
   switch (boardType) {
     case "job-board":
-      return `Good luck finding the right candidate! :four_leaf_clover:${includeLink ? `\n${link}` : ""}`;
+      return `Good luck finding the right candidate! :four_leaf_clover:`;
     case "dev-board":
-      return `Hope you find the perfect match! :handshake:${includeLink ? `\n${link}` : ""}`;
+      return `Hope you find the perfect match! :handshake:`;
     case "showcase":
-      return `Thanks for sharing your project! :star2:${includeLink ? `\n${link}` : ""}`;
+      return `Thanks for sharing your project! :star2:`;
     default:
-      return `${CODING_RESPONSE}${includeLink ? `\n${link}` : ""}`;
+      return `${CODING_RESPONSE}`;
   }
 }

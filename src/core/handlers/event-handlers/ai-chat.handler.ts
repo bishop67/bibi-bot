@@ -91,11 +91,11 @@ function shouldRespond(message: Message, client: Client): boolean {
     (role) => role.name.toLowerCase() === "bibi",
   );
   const isReply = isReplyToBot(message, client);
-  const isCodingGlobal = CODING_GLOBAL_PATTERN.test(
+  const isBotMention = CODING_GLOBAL_PATTERN.test(
     message.content.toLowerCase(),
   );
 
-  return isMention || isRoleMention || isReply || isCodingGlobal;
+  return isMention || isRoleMention || isReply || isBotMention;
 }
 
 function isReplyToBot(message: Message, client: Client): boolean {

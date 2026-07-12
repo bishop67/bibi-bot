@@ -1,4 +1,4 @@
-import os from "os";
+import { readFileSync } from "fs";
 import { EmbedBuilder, type CommandInteraction } from "discord.js";
 
 function formatBytes(bytes: number): string {
@@ -22,13 +22,48 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
+/**
+ * Reads the actual container memory limit from cgroups, since os.totalmem()
+ * reports the HOST machine's memory, not the container's real allocation.
+ * Tries cgroup v2 first, then falls back to v1. Returns null if unavailable
+ * (e.g. running outside a container, or the limit is "unlimited").
+ */
+function getContainerMemoryLimit(): number | null {
+  try {
+    // cgroup v2
+    const v2 = readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
+    if (v2 !== "max") return parseInt(v2, 10);
+  } catch {
+    // ignore, try v1 below
+  }
+
+  try {
+    // cgroup v1
+    const v1 = readFileSync(
+      "/sys/fs/cgroup/memory/memory.limit_in_bytes",
+      "utf8",
+    ).trim();
+    const limit = parseInt(v1, 10);
+    // v1 reports an absurdly large number (e.g. ~9223372036854771712) when unlimited
+    if (limit < Number.MAX_SAFE_INTEGER / 2) return limit;
+  } catch {
+    // ignore
+  }
+
+  return null;
+}
+
 export async function executeStatus(
   _interaction: CommandInteraction,
 ): Promise<{ embeds: EmbedBuilder[] }> {
   const mem = process.memoryUsage();
   const cpuUsage = process.cpuUsage();
   const cpuMs = (cpuUsage.user + cpuUsage.system) / 1000;
-  const loadAvg = os.loadavg();
+
+  const containerLimit = getContainerMemoryLimit();
+  const memoryField = containerLimit
+    ? `${formatBytes(mem.rss)} / ${formatBytes(containerLimit)} (${((mem.rss / containerLimit) * 100).toFixed(1)}%)`
+    : `${formatBytes(mem.rss)} (container limit unavailable)`;
 
   const embed = new EmbedBuilder()
     .setTitle("Bot Status")
@@ -40,8 +75,8 @@ export async function executeStatus(
         inline: true,
       },
       {
-        name: "Memory (RSS)",
-        value: formatBytes(mem.rss),
+        name: "Memory (RSS / Container Limit)",
+        value: memoryField,
         inline: true,
       },
       {
@@ -54,17 +89,10 @@ export async function executeStatus(
         value: `${cpuMs.toFixed(0)} ms`,
         inline: true,
       },
-      {
-        name: "System Load (1m/5m/15m)",
-        value: loadAvg.map((n) => n.toFixed(2)).join(" / "),
-        inline: true,
-      },
-      {
-        name: "System Memory",
-        value: `${formatBytes(os.totalmem() - os.freemem())} / ${formatBytes(os.totalmem())}`,
-        inline: true,
-      },
     )
+    .setFooter({
+      text: "Note: memory shown is this process only, scoped to the container limit, not the shared host machine.",
+    })
     .setTimestamp();
 
   return { embeds: [embed] };

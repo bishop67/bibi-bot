@@ -2,7 +2,7 @@ import { executeStatus } from "@/core/handlers/command-handlers/mod/status-handl
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
-import { MessageFlags, type CommandInteraction } from "discord.js";
+import { type CommandInteraction } from "discord.js";
 import { Discord, Slash } from "discordx";
 
 @Discord()
@@ -13,7 +13,7 @@ export class StatusCommand {
     dmPermission: false,
   })
   async status(interaction: CommandInteraction) {
-    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] })))
+    if (!(await safeDeferReply(interaction)))
       return;
 
     if (interaction.member?.user.id && interaction.guildId) {

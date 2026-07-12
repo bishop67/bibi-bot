@@ -22,15 +22,8 @@ function formatUptime(seconds: number): string {
   return parts.join(" ");
 }
 
-/**
- * Reads the actual container memory limit from cgroups, since os.totalmem()
- * reports the HOST machine's memory, not the container's real allocation.
- * Tries cgroup v2 first, then falls back to v1. Returns null if unavailable
- * (e.g. running outside a container, or the limit is "unlimited").
- */
 function getContainerMemoryLimit(): number | null {
   try {
-    // cgroup v2
     const v2 = readFileSync("/sys/fs/cgroup/memory.max", "utf8").trim();
     if (v2 !== "max") return parseInt(v2, 10);
   } catch {
@@ -38,13 +31,11 @@ function getContainerMemoryLimit(): number | null {
   }
 
   try {
-    // cgroup v1
     const v1 = readFileSync(
       "/sys/fs/cgroup/memory/memory.limit_in_bytes",
       "utf8",
     ).trim();
     const limit = parseInt(v1, 10);
-    // v1 reports an absurdly large number (e.g. ~9223372036854771712) when unlimited
     if (limit < Number.MAX_SAFE_INTEGER / 2) return limit;
   } catch {
     // ignore
@@ -54,44 +45,50 @@ function getContainerMemoryLimit(): number | null {
 }
 
 export async function executeStatus(
-  _interaction: CommandInteraction,
+  interaction: CommandInteraction,
 ): Promise<{ embeds: EmbedBuilder[] }> {
   const mem = process.memoryUsage();
   const cpuUsage = process.cpuUsage();
   const cpuMs = (cpuUsage.user + cpuUsage.system) / 1000;
+  const uptimeSeconds = process.uptime();
+
+  const heapTotalSafe = Math.max(mem.heapTotal, mem.heapUsed);
+  const heapPercent = ((mem.heapUsed / heapTotalSafe) * 100).toFixed(1);
 
   const containerLimit = getContainerMemoryLimit();
   const memoryField = containerLimit
     ? `${formatBytes(mem.rss)} / ${formatBytes(containerLimit)} (${((mem.rss / containerLimit) * 100).toFixed(1)}%)`
     : `${formatBytes(mem.rss)} (container limit unavailable)`;
 
+  const cpuPercent =
+    uptimeSeconds > 0
+      ? ((cpuMs / (uptimeSeconds * 1000)) * 100).toFixed(1)
+      : "0.0";
+
+  const client = interaction.client;
+  const ping = client.ws.ping >= 0 ? `${client.ws.ping} ms` : "calculating...";
+  const guildCount = client.guilds.cache.size;
+  const cachedMembers = client.guilds.cache.reduce(
+    (total, guild) => total + guild.members.cache.size,
+    0,
+  );
+
   const embed = new EmbedBuilder()
     .setTitle("Bot Status")
     .setColor(0x5865f2)
     .addFields(
-      {
-        name: "Uptime",
-        value: formatUptime(process.uptime()),
-        inline: true,
-      },
-      {
-        name: "Memory (RSS / Container Limit)",
-        value: memoryField,
-        inline: true,
-      },
-      {
-        name: "Heap Used / Total",
-        value: `${formatBytes(mem.heapUsed)} / ${formatBytes(mem.heapTotal)}`,
-        inline: true,
-      },
-      {
-        name: "CPU Time (process)",
-        value: `${cpuMs.toFixed(0)} ms`,
-        inline: true,
-      },
+      { name: "Uptime", value: formatUptime(uptimeSeconds), inline: true },
+      { name: "Memory (RSS / Container Limit)", value: memoryField, inline: true },
+      { name: "Heap (Used / Total)", value: `${formatBytes(mem.heapUsed)} / ${formatBytes(heapTotalSafe)} (${heapPercent}%)`, inline: true },
+      { name: "External / Buffers", value: `${formatBytes(mem.external)} / ${formatBytes(mem.arrayBuffers)}`, inline: true },
+      { name: "CPU Time (process)", value: `${cpuMs.toFixed(0)} ms (${cpuPercent}% of uptime)`, inline: true },
+      { name: "Gateway Ping", value: ping, inline: true },
+      { name: "Guilds Cached", value: `${guildCount}`, inline: true },
+      { name: "Members Cached", value: `${cachedMembers}`, inline: true },
+      { name: "Runtime", value: `Bun ${process.versions.bun ?? "unknown"}`, inline: true },
     )
     .setFooter({
-      text: "Note: memory shown is this process only, scoped to the container limit, not the shared host machine.",
+      text: "Memory figures are for this process only, measured against this container's actual memory limit — not the shared host machine's total.",
     })
     .setTimestamp();
 

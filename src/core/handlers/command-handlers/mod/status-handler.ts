@@ -1,4 +1,4 @@
-import { statfsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { EmbedBuilder, type CommandInteraction } from "discord.js";
 
 function formatBytes(bytes: number): string {
@@ -44,17 +44,11 @@ function getContainerMemoryLimit(): number | null {
   return null;
 }
 
-function getDiskUsage(): { used: number; total: number } | null {
-  try {
-    const stats = statfsSync(process.cwd());
-    const total = stats.blocks * stats.bsize;
-    const free = stats.bfree * stats.bsize;
-    return { used: total - free, total };
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * Measures how long it takes a setImmediate callback to actually fire.
+ * Under normal conditions this is sub-millisecond; a busy/blocked event
+ * loop (heavy synchronous work elsewhere) shows up as a larger number here.
+ */
 function measureEventLoopLag(): Promise<number> {
   const start = performance.now();
   return new Promise((resolve) => {
@@ -82,11 +76,6 @@ export async function executeStatus(
     uptimeSeconds > 0
       ? ((cpuMs / (uptimeSeconds * 1000)) * 100).toFixed(1)
       : "0.0";
-
-  const disk = getDiskUsage();
-  const diskField = disk
-    ? `${formatBytes(disk.used)} / ${formatBytes(disk.total)} (${((disk.used / disk.total) * 100).toFixed(1)}%)`
-    : "unavailable";
 
   const client = interaction.client;
   const gatewayPing =
@@ -119,7 +108,6 @@ export async function executeStatus(
       { name: "Memory (RSS / Container Limit)", value: memoryField, inline: true },
       { name: "Heap (Used / Total)", value: `${formatBytes(mem.heapUsed)} / ${formatBytes(heapTotalSafe)} (${heapPercent}%)`, inline: true },
       { name: "External / Buffers", value: `${formatBytes(mem.external)} / ${formatBytes(mem.arrayBuffers)}`, inline: true },
-      { name: "Disk Usage", value: diskField, inline: true },
       { name: "CPU Time (process)", value: `${cpuMs.toFixed(0)} ms (${cpuPercent}% of uptime)`, inline: true },
       { name: "Event Loop Lag", value: `${eventLoopLag.toFixed(2)} ms`, inline: true },
       { name: "Gateway Ping", value: gatewayPing, inline: true },

@@ -88,7 +88,7 @@ export async function executeStatus(
       { name: "Runtime", value: `Bun ${process.versions.bun ?? "unknown"}`, inline: true },
     )
     .setFooter({
-      text: "Memory figures are for this process only, measured against this container's actual memory limit — not the shared host machine's total.",
+      text: "Yes, The host server is rich (64GB), but I'm living on a Docker allowance.",
     })
     .setTimestamp();
 

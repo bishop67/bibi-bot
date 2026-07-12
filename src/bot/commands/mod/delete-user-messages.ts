@@ -5,7 +5,6 @@ import { memberCommandHistory } from "@/lib/db-schema";
 import type { CommandInteraction, User } from "discord.js";
 import {
   ApplicationCommandOptionType,
-  MessageFlags,
   PermissionFlagsBits,
 } from "discord.js";
 import { Discord, Slash, SlashOption } from "discordx";
@@ -46,7 +45,7 @@ export class DeleteUserMessages {
     reason: string | undefined,
     interaction: CommandInteraction,
   ) {
-    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))) return;
+    if (!(await safeDeferReply(interaction))) return;
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)
         .values({

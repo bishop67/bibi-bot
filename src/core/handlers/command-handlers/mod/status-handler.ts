@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { statfsSync, readFileSync } from "fs";
 import { EmbedBuilder, type CommandInteraction } from "discord.js";
 
 function formatBytes(bytes: number): string {
@@ -44,6 +44,24 @@ function getContainerMemoryLimit(): number | null {
   return null;
 }
 
+function getDiskUsage(): { used: number; total: number } | null {
+  try {
+    const stats = statfsSync(process.cwd());
+    const total = stats.blocks * stats.bsize;
+    const free = stats.bfree * stats.bsize;
+    return { used: total - free, total };
+  } catch {
+    return null;
+  }
+}
+
+function measureEventLoopLag(): Promise<number> {
+  const start = performance.now();
+  return new Promise((resolve) => {
+    setImmediate(() => resolve(performance.now() - start));
+  });
+}
+
 export async function executeStatus(
   interaction: CommandInteraction,
 ): Promise<{ embeds: EmbedBuilder[] }> {
@@ -65,13 +83,33 @@ export async function executeStatus(
       ? ((cpuMs / (uptimeSeconds * 1000)) * 100).toFixed(1)
       : "0.0";
 
+  const disk = getDiskUsage();
+  const diskField = disk
+    ? `${formatBytes(disk.used)} / ${formatBytes(disk.total)} (${((disk.used / disk.total) * 100).toFixed(1)}%)`
+    : "unavailable";
+
   const client = interaction.client;
-  const ping = client.ws.ping >= 0 ? `${client.ws.ping} ms` : "calculating...";
+  const gatewayPing =
+    client.ws.ping >= 0 ? `${client.ws.ping} ms` : "calculating...";
+
+  const restStart = performance.now();
+  let restPing = "unavailable";
+  try {
+    await client.rest.get(`/users/@me`);
+    restPing = `${(performance.now() - restStart).toFixed(0)} ms`;
+  } catch {
+    // leave as unavailable if the REST call fails
+  }
+
+  const eventLoopLag = await measureEventLoopLag();
+
   const guildCount = client.guilds.cache.size;
   const cachedMembers = client.guilds.cache.reduce(
     (total, guild) => total + guild.members.cache.size,
     0,
   );
+
+  const pgPoolMax = process.env.DATABASE_URL ? "3 (configured max)" : "n/a";
 
   const embed = new EmbedBuilder()
     .setTitle("Bot Status")
@@ -81,14 +119,18 @@ export async function executeStatus(
       { name: "Memory (RSS / Container Limit)", value: memoryField, inline: true },
       { name: "Heap (Used / Total)", value: `${formatBytes(mem.heapUsed)} / ${formatBytes(heapTotalSafe)} (${heapPercent}%)`, inline: true },
       { name: "External / Buffers", value: `${formatBytes(mem.external)} / ${formatBytes(mem.arrayBuffers)}`, inline: true },
+      { name: "Disk Usage", value: diskField, inline: true },
       { name: "CPU Time (process)", value: `${cpuMs.toFixed(0)} ms (${cpuPercent}% of uptime)`, inline: true },
-      { name: "Gateway Ping", value: ping, inline: true },
+      { name: "Event Loop Lag", value: `${eventLoopLag.toFixed(2)} ms`, inline: true },
+      { name: "Gateway Ping", value: gatewayPing, inline: true },
+      { name: "REST API Latency", value: restPing, inline: true },
       { name: "Guilds Cached", value: `${guildCount}`, inline: true },
       { name: "Members Cached", value: `${cachedMembers}`, inline: true },
-      { name: "Runtime", value: `Bun ${process.versions.bun ?? "unknown"}`, inline: true },
+      { name: "Postgres Pool", value: pgPoolMax, inline: true },
+      { name: "Runtime", value: `Bun ${process.versions.bun ?? "unknown"} / V8 ${process.versions.v8 ?? "unknown"}`, inline: true },
     )
     .setFooter({
-      text: "Yes, The host server is rich (64GB), but I'm living on a Docker allowance.",
+      text: "Memory figures are for this process only, measured against this container's actual memory limit — not the shared host machine's total.",
     })
     .setTimestamp();
 

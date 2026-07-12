@@ -5,7 +5,7 @@ import { MemberUpdateQueueService } from "@/core/services/members/member-update-
 import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
 import { ConfigValidator } from "@/shared/config/validator";
-import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
+import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
 import { Client } from "discordx";
 import "./bot";
 import "./elysia";
@@ -34,6 +34,10 @@ export const bot = new Client({
     Partials.User,
   ],
   silent: false,
+  makeCache: Options.cacheWithLimits({
+    ...Options.DefaultMakeCacheSettings,
+    MessageManager: 50,
+  }),
   botGuilds: process.env.GUILD_ID!.split(",").map((s) => s.trim()),
 });
 

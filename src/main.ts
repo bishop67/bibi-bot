@@ -10,9 +10,20 @@ import { Client } from "discordx";
 import "./bot";
 import "./elysia";
 
+
 ConfigValidator.validateConfig();
 
 const token = process.env.TOKEN;
+
+const rawGuildId = process.env.GUILD_ID?.trim();
+if (!rawGuildId) {
+  botLogger.error(
+    "Could not find GUILD_ID in environment. Set GUILD_ID to a single server ID, " +
+      "or a comma-separated list (e.g. GUILD_ID=123,456) to run the bot in multiple servers.",
+  );
+  throw Error("Could not find GUILD_ID in your environment");
+}
+const guildIds = rawGuildId.split(",").map((s) => s.trim()).filter(Boolean);
 
 // discord client config
 export const bot = new Client({
@@ -38,7 +49,7 @@ export const bot = new Client({
     ...Options.DefaultMakeCacheSettings,
     MessageManager: 50,
   }),
-  botGuilds: process.env.GUILD_ID!.split(",").map((s) => s.trim()),
+  botGuilds: guildIds,
 });
 
 bot.once("clientReady", async () => {
@@ -47,30 +58,34 @@ bot.once("clientReady", async () => {
   process.env.DOCKER && AttachmentRefreshQueueService.start();
   botLogger.info("Bot started", { clientId: bot.user?.id });
 
-  for (const guild of bot.guilds.cache.values()) {
-    try {
-      const members = await guild.members.fetch();
+  const BACKFILL_TIMEOUT_MS = 60_000;
+
+  const backfillResults = await Promise.allSettled(
+    bot.guilds.cache.map(async (guild) => {
+      const members = await Promise.race([
+        guild.members.fetch(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("member fetch timed out")), BACKFILL_TIMEOUT_MS),
+        ),
+      ]);
+
       for (const member of members.values()) {
         if (member.user.bot) continue;
         await MembersService.upsertDbMember(member, "join");
       }
-      botLogger.info(`Backfilled members for guild`, {
-        guildId: guild.id,
-        count: members.size,
-      });
+      botLogger.info(`Backfilled members for guild`, { guildId: guild.id, count: members.size });
 
       const firstMember = members.first();
-        if (firstMember) {
-          await MembersService.updateMemberCount(firstMember);
-        }
+      if (firstMember) await MembersService.updateMemberCount(firstMember);
+    }),
+  );
 
-    } catch (err) {
-      botLogger.error(`Backfill failed for guild`, {
-        guildId: guild.id,
-        error: String(err),
-      });
+  backfillResults.forEach((result, i) => {
+    if (result.status === "rejected") {
+      const guild = bot.guilds.cache.at(i);
+      botLogger.error(`Backfill failed for guild`, { guildId: guild?.id ?? "unknown", error: String(result.reason) });
     }
-  }
+  });
 });
 
 

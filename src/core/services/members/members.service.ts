@@ -67,9 +67,12 @@ export class MembersService {
       })
       .returning();
 
-    // Get member roles
+// Get member roles (scoped to this guild - role IDs aren't valid across guilds)
     const dbMemberRoles = await db.query.memberRole.findMany({
-      where: eq(memberRole.memberId, memberId),
+      where: and(
+        eq(memberRole.memberId, memberId),
+        eq(memberRole.guildId, guildId),
+      ),
     });
 
     // create or update member guild

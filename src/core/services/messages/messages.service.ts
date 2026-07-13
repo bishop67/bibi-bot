@@ -13,6 +13,7 @@ import {
   GuildTextBasedChannel,
   Message,
   PartialMessage,
+  RESTJSONErrorCodes,
   TextChannel,
 } from "discord.js";
 
@@ -229,6 +230,67 @@ export class MessagesService {
     );
   }
 
+// RFC-style path normalization: a ".." segment pops the previous path segment
+  // and "."/empty segments are dropped, but ".." can never pop above the path root
+  // (it cannot remove the host), matching how a browser resolves the URL.
+  static normalizeUrlPath(path: string) {
+    const out: string[] = [];
+    for (const segment of path.split("/")) {
+      if (segment === "..") out.pop();
+      else if (segment === "." || segment === "") continue;
+      else out.push(segment);
+    }
+    return "/" + out.join("/");
+  }
+
+  // General invite parser: canonicalize the URL the way Discord's client would, then
+  // extract codes. Undoes invisible/zero-width chars, angle-bracket wrapping,
+  // blockquote (">") + newline splitting, whitespace/punctuation stuffing, defanged
+  // and unicode/full-width dots, backslashes, (double) percent-encoding, scheme +
+  // userinfo (evil@discord.gg) + port noise, and per-host path traversal. Matches
+  // discord.gg, discord(app).com/invite (+ ptb/canary), and third-party shorteners
+  // (dsc.gg, invite.gg, discord.io/li/me/st, dis.gd).
+  static extractInviteCodes(raw: string) {
+    let content = raw
+      .replace(
+        /[\u00ad\u200b-\u200f\u202a-\u202e\u2060-\u2064\u206a-\u206f\ufeff\u180e]/g,
+        "",
+      )
+      .replace(/[<>]/g, "")
+      .replace(/^\s*>+/gm, "")
+      .replace(/[[(){}]\.[\])}]/g, ".")
+      .replace(/[\u3002\uff0e\uff61\u2024]/g, ".")
+      .replace(/\\/g, "/")
+      .replace(/\s+/g, "");
+    for (let i = 0; i < 3; i++) {
+      if (!/%[0-9a-f]{2}/i.test(content)) break;
+      try {
+        const decoded = decodeURIComponent(content);
+        if (decoded === content) break;
+        content = decoded;
+      } catch {
+        break;
+      }
+    }
+    content = content
+      .toLowerCase()
+      .replace(/https?:/g, "")
+      .replace(/(^|\/\/|\/)[^/\s]*@/g, "$1")
+      .replace(/:\d+(?=\/)/g, "");
+    const hostRegex =
+      /(discord\.gg|(?:ptb\.|canary\.)?discord(?:app)?\.com|dsc\.gg|invite\.gg|discord\.(?:io|li|me|st)|dis\.gd)(\/[^\s]*)?/gi;
+    const inviteRegex =
+      /^(?:discord\.gg|(?:ptb\.|canary\.)?discord(?:app)?\.com\/invite|dsc\.gg|invite\.gg|discord\.(?:io|li|me|st)|dis\.gd)\/([a-z0-9-]+)/i;
+    const codes: string[] = [];
+    for (const match of content.matchAll(hostRegex)) {
+      const host = match[1];
+      const path = match[2] ? MessagesService.normalizeUrlPath(match[2]) : "";
+      const invite = (host + path).match(inviteRegex);
+      if (invite) codes.push(invite[1]);
+    }
+    return codes;
+  }
+  
   // Check warnings utility
   static async checkWarnings(message: Message<boolean>) {
     const content = message.content;
@@ -237,15 +299,18 @@ export class MessagesService {
     if (!member || !message.guild) return;
 
     const memberGuildData = await db.query.memberGuild.findFirst({
-      where: eq(memberGuild.memberId, member.id),
+      where: and(
+        eq(memberGuild.memberId, member.id),
+        eq(memberGuild.guildId, message.guild.id),
+      ),
     });
 
     if (!memberGuildData) return;
+    
 
-    const inviteRegex =
-      /(?:discord\.gg\/|discordapp\.com\/invite\/|discord\.com\/invite\/)([a-zA-Z0-9-]+)/gi;
-    const matches = content.matchAll(inviteRegex);
-    const inviteCodes = [...matches].map((match) => match[1]);
+    const inviteCodes = [
+      ...new Set(MessagesService.extractInviteCodes(content)),
+    ].slice(0, 5);
 
     if (inviteCodes.length === 0) return;
 
@@ -258,13 +323,15 @@ export class MessagesService {
           hasExternalInvite = true;
           break;
         }
-      } catch {
-        // Invalid invite or couldn't fetch - treat as external to be safe
-        hasExternalInvite = true;
-        break;
+      } catch (error) {
+        if (error instanceof Object && "code" in error && error.code === RESTJSONErrorCodes.UnknownInvite) {
+          hasExternalInvite = true;
+          break;
+        }
       }
     }
 
+    
     if (hasExternalInvite) {
       await message.delete();
 

@@ -60,6 +60,11 @@ export class ConfigValidator {
       feature: "Member Count Display",
     },
     {
+      key: "REPORT_CHANNELS",
+      required: false,
+      feature: "Member Reports",
+    },
+    {
       key: "SHOULD_USER_LEVEL_UP",
       required: false,
       feature: "Level Up System",

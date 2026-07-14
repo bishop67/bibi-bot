@@ -15,6 +15,13 @@
       "when": 1781268114434,
       "tag": "0001_add_privacy_optout",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784000803269,
+      "tag": "0002_wooden_loki",
+      "breakpoints": true
     }
   ]
 }

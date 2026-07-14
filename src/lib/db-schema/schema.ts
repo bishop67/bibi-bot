@@ -147,6 +147,35 @@ export const memberRole = pgTable("MemberRole", {
 		}).onUpdate("cascade").onDelete("cascade"),
 ]);
 
+export const modLog = pgTable("ModLog", {
+	id: serial().primaryKey().notNull(),
+	guildId: text().notNull(),
+	action: text().notNull(),
+	targetId: text().notNull(),
+	moderatorId: text(),
+	reason: text(),
+	channelId: text(),
+	logMessageId: text(),
+	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+}, (table) => [
+	index("ModLog_guildId_createdAt_idx").using("btree", table.guildId.asc().nullsLast().op("text_ops"), table.createdAt.desc().nullsLast()),
+	foreignKey({
+			columns: [table.guildId],
+			foreignColumns: [guild.guildId],
+			name: "ModLog_guildId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.targetId],
+			foreignColumns: [member.memberId],
+			name: "ModLog_targetId_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	foreignKey({
+			columns: [table.moderatorId],
+			foreignColumns: [member.memberId],
+			name: "ModLog_moderatorId_fkey"
+		}).onUpdate("cascade").onDelete("set null"),
+]);
+
 export const memberWarning = pgTable("MemberWarning", {
 	id: serial().primaryKey().notNull(),
 	guildId: text().notNull(),

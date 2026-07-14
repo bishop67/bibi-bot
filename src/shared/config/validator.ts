@@ -90,6 +90,11 @@ export class ConfigValidator {
       feature: "Template Validation Notifications",
     },
     {
+      key: "MOD_LOG_CHANNELS",
+      required: false,
+      feature: "Moderation Log",
+    },
+    {
       key: "BOT_ICON",
       required: false,
       feature: "Custom Bot Icon",

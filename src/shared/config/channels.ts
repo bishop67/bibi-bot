@@ -22,3 +22,6 @@ export const SPAM_EXEMPT_CHANNELS =
 
 export const REPORT_CHANNELS =
   process.env.REPORT_CHANNELS?.split(",")?.map((s) => s.trim()) || [];
+
+export const MOD_LOG_CHANNELS =
+  process.env.MOD_LOG_CHANNELS?.split(",")?.map((s) => s.trim()) || [];

@@ -1,4 +1,5 @@
 import { userJailedEmbed } from "@/core/embeds/user-jailed.embed";
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { RolesService } from "@/core/services/roles/roles.service";
 import { ThreadService } from "@/core/services/threads/thread.service";
 import { db } from "@/lib/db";
@@ -101,6 +102,14 @@ export class DeleteUserMessagesService {
       await discordMember.roles.add(jailRoleId).catch(error);
 
     if (!alreadyJailed) {
+      await ModLogService.postLog({
+        guild: params.guild,
+        action: "jail",
+        targetId: params.memberId,
+        targetName: params.user?.username ?? "Unknown User",
+        reason: params.reason,
+      });
+
       await this.sendJailNotification(params);
     }
   }

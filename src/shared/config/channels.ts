@@ -19,3 +19,6 @@ export const TEMPLATE_VALIDATION_CHANNELS =
 
 export const SPAM_EXEMPT_CHANNELS =
   process.env.SPAM_EXEMPT_CHANNELS?.split(",")?.map((s) => s.trim()) || [];
+
+export const REPORT_CHANNELS =
+  process.env.REPORT_CHANNELS?.split(",")?.map((s) => s.trim()) || [];

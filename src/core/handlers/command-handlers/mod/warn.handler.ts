@@ -1,4 +1,5 @@
 import { WarningsService } from "@/core/services/moderation/warnings.service";
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import type { MessageResult } from "@/types";
 import type { CommandInteraction, User } from "discord.js";
 
@@ -23,6 +24,16 @@ export async function executeWarn(
     guildId: interaction.guild.id,
     memberId: target.id,
     moderatorId: interaction.member?.user.id,
+    reason,
+  });
+
+  await ModLogService.postLog({
+    guild: interaction.guild,
+    action: "warn",
+    targetId: target.id,
+    targetName: target.username,
+    moderatorId: interaction.member?.user.id,
+    moderatorName: interaction.member?.user.username,
     reason,
   });
 

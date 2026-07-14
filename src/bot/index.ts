@@ -20,21 +20,29 @@ import "./commands/admin/audit-roles";
 import "./commands/admin/troll-move-user";
 
 // Commands - Mod
+import "./commands/mod/clear-warnings";
 import "./commands/mod/delete-member-db";
 import "./commands/mod/delete-messages";
 import "./commands/mod/delete-user-messages";
+import "./commands/mod/delete-warning";
+import "./commands/mod/edit-warning";
 import "./commands/mod/log-command-history";
 import "./commands/mod/log-deleted-messages-history";
 import "./commands/mod/lookback-members";
 import "./commands/mod/status";
+import "./commands/mod/top-warnings";
 import "./commands/mod/verify-threads";
 import "./commands/mod/verify-users";
+import "./commands/mod/warn";
+import "./commands/mod/warnings";
 
 // Commands - User
 import "./commands/user/lookback-me";
 import "./commands/user/me";
 import "./commands/user/members";
 import "./commands/user/privacy";
+import "./commands/user/report";
 import "./commands/user/top";
 import "./commands/user/translate";
 import "./commands/user/user";
+import "./commands/user/time";

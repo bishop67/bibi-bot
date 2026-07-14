@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm/relations";
-import { guild, guildVoiceEvents, member, memberGuild, memberRole, memberCommandHistory, memberDeletedMessages, memberHelper, memberMessages, memberWarning, tag, thread, threadMessage, attachment, threadTag } from "./schema";
+import { guild, guildVoiceEvents, member, memberGuild, memberRole, memberCommandHistory, memberDeletedMessages, memberHelper, memberMessages, memberWarning, modLog, tag, thread, threadMessage, attachment, threadTag } from "./schema";
+
 
 export const guildVoiceEventsRelations = relations(guildVoiceEvents, ({one}) => ({
 	guild: one(guild, {
@@ -20,6 +21,7 @@ export const guildRelations = relations(guild, ({many}) => ({
 	memberDeletedMessages: many(memberDeletedMessages),
 	memberHelpers: many(memberHelper),
 	memberWarnings: many(memberWarning),
+	modLogs: many(modLog),
 	memberMessages: many(memberMessages),
 	tags: many(tag),
 	threadMessages: many(threadMessage),
@@ -44,9 +46,32 @@ export const memberRelations = relations(member, ({many}) => ({
 	memberWarnings_moderatorId: many(memberWarning, {
 		relationName: "memberWarning_moderator"
 	}),
+	modLogs_targetId: many(modLog, {
+		relationName: "modLog_target"
+	}),
+	modLogs_moderatorId: many(modLog, {
+		relationName: "modLog_moderator"
+	}),
 	memberMessages: many(memberMessages),
 	threadMessages: many(threadMessage),
 	threads: many(thread),
+}));
+
+export const modLogRelations = relations(modLog, ({one}) => ({
+	guild: one(guild, {
+		fields: [modLog.guildId],
+		references: [guild.guildId]
+	}),
+	target: one(member, {
+		fields: [modLog.targetId],
+		references: [member.memberId],
+		relationName: "modLog_target"
+	}),
+	moderator: one(member, {
+		fields: [modLog.moderatorId],
+		references: [member.memberId],
+		relationName: "modLog_moderator"
+	}),
 }));
 
 export const memberWarningRelations = relations(memberWarning, ({one}) => ({

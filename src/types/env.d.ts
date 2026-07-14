@@ -43,6 +43,9 @@ interface FeatureBotEnvironment {
   // Admin API
   ADMIN_API_KEY: string;
 
+  // ModLog
+  MOD_LOG_CHANNELS: string;
+
   // Appearance Features
   BOT_ICON: string;
 }

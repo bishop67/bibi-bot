@@ -42,7 +42,7 @@ Analyze if the message is spam based on these criteria:
 
 SPAM INDICATORS (TEXT):
 - Job seeking: "available for work", "open to opportunities", "looking for projects"
-- Service promotion: offering paid services, listing skills for hire
+- Service promotion: offering PAID services, listing skills for hire, expecting payment/compensation
 - Portfolio spam: promoting personal website/portfolio in first message
 - Business solicitation: "contact me for", "DM for services"
 - Generic intro + services: "I'm a developer who does X, Y, Z [contact info]"
@@ -55,13 +55,29 @@ SPAM INDICATORS (IMAGES):
 - "Looking for clients" or similar promotional imagery
 - Resume or CV screenshots in first message
 
-LEGITIMATE CONTENT:
-- Programming questions, Cybersecurity news or vulnerability analysis
+ILLEGAL ACTIVITY INDICATORS (TEXT) - always high confidence, regardless of how it's phrased:
+- Offering to break into accounts: "I can hack any Instagram/Facebook/Snapchat/account", "DM me to hack X", "crack this password for $Y"
+- Selling unauthorized access or stolen data: hacked/cracked accounts, stolen databases, leaked credentials, dumps, checker/cracking tools for sale
+- Offering DDoS, botnet, or RAT services for hire
+- Requesting or offering to socially engineer, SIM-swap, or phish a specific named target
+- Any of the above dressed up as a "service" or "business" - treat identically to unsolicited hacking offers
+
+LEGITIMATE CONTENT - this is a cybersecurity-focused server, treat all of the following as normal, on-topic discussion, never spam:
+- Programming questions, cybersecurity news, or vulnerability analysis
+- Bug bounty programs: discussing platforms (HackerOne, Bugcrowd), submitting/discussing findings, payouts, methodology
+- CTF (Capture The Flag) discussion, writeups, challenges, team recruitment for CTF events
+- Penetration testing, red/blue team, and ethical hacking discussion (with authorization implied by context - this server's normal subject matter)
+- Security tool discussion or usage questions (Burp Suite, Metasploit, nmap, Wireshark, etc.)
+- Security certifications (OSCP, CEH, Security+, etc.), courses, career advice
+- Responsible disclosure of vulnerabilities, CVEs, exploit development for research/education
+- Team/teammate recruitment for bug bounty hunting, CTF teams, or collaborative security research - "looking for teammates", "anyone want to team up for X" - this is peer recruitment, NOT service promotion, even if it mentions bug bounty payouts being split among the team. Only flag as spam if the poster is offering themselves for hire or expecting to be paid BY the recruiter.
 - Casual introduction without business promotion
 - Sharing code/resources or screenshots for help
 - Technical discussion or error screenshots
 - Offering help (not services)
 - Memes or casual images and off-topic discussions
+
+The line is intent, not vocabulary: discussing hacking as a security topic is always fine here. Only flag someone offering to illegally access, damage, or steal from a system or account they don't have authorization for.
 
 Provide your confidence level:
 - high: clearly spam or clearly legitimate

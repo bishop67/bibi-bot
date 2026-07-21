@@ -1,3 +1,4 @@
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
@@ -47,6 +48,18 @@ export class ClearWarnings {
       interaction.guildId,
       user.id,
     );
+
+    if (count > 0 && interaction.guild) {
+      await ModLogService.postLog({
+        guild: interaction.guild,
+        action: "clear-warnings",
+        targetId: user.id,
+        targetName: user.username,
+        moderatorId: interaction.member?.user.id,
+        moderatorName: interaction.member?.user.username,
+        reason: `Cleared ${count} warning${count === 1 ? "" : "s"}`,
+      });
+    }
 
     return safeEditReply(
       interaction,

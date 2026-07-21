@@ -1,10 +1,10 @@
-import { simpleEmbedExample } from "@/core/embeds/simple.embed";
 import { db } from "@/lib/db";
-import { modLog } from "@/lib/db-schema";
+import { member, modLog } from "@/lib/db-schema";
+import { BOT_ICON, RED_COLOR } from "@/shared/config/branding";
 import { MOD_LOG_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
-import { and, eq } from "drizzle-orm";
-import type { Guild, TextChannel } from "discord.js";
+import { eq } from "drizzle-orm";
+import type { APIEmbed, Guild, TextChannel } from "discord.js";
 
 export type ModLogAction =
   | "warn"
@@ -14,21 +14,52 @@ export type ModLogAction =
   | "jail"
   | "unjail";
 
+const ACTION_TITLES: Record<ModLogAction, string> = {
+  warn: "Member Warned",
+  "edit-warning": "Warning Edited",
+  "delete-warning": "Warning Deleted",
+  "clear-warnings": "Warnings Cleared",
+  jail: "Member Jailed",
+  unjail: "Member Unjailed",
+};
+
+/**
+ * Single entry point for all moderation logging. Every mod action that
+ * changes a member's standing (warn/edit/delete/clear/jail/unjail) should
+ * call postLog() exactly once, from the service layer (not the command
+ * layer) so there's one call site per action and no risk of double-posting.
+ *
+ * Always writes an auditable row to the ModLog table, even if no log
+ * channel is configured or the channel post fails - the DB row is the
+ * source of truth, the channel post is a best-effort mirror of it.
+ */
 export class ModLogService {
   private static _warningLogged = false;
 
   private static findLogChannel(guild: Guild) {
     return guild.channels.cache.find(
-      ({ name }) => MOD_LOG_CHANNELS.includes(name) && name !== undefined,
+      ({ name }) => name !== undefined && MOD_LOG_CHANNELS.includes(name),
     );
   }
 
   /**
-   * Posts a mod-log embed (if MOD_LOG_CHANNELS is configured) and stores
-   * an auditable DB record either way, so history exists even without a
-   * log channel set up. Returns the created record (with its `id`, used
-   * later by /reason to look the entry back up).
+   * Best-effort resolution of a display name for the log embed when the
+   * caller only has an ID (e.g. edit-warning/delete-warning only receive a
+   * warning ID, not the target user). Cache -> DB -> raw ID, in that order.
    */
+  private static async resolveTargetName(guild: Guild, targetId: string) {
+    const cached = guild.members.cache.get(targetId);
+    if (cached) return cached.user.username;
+
+    const dbMember = await db.query.member.findFirst({
+      where: eq(member.memberId, targetId),
+      columns: { username: true },
+    });
+    if (dbMember?.username) return dbMember.username;
+
+    return "Unknown User";
+  }
+
   static async postLog({
     guild,
     action,
@@ -41,105 +72,78 @@ export class ModLogService {
     guild: Guild;
     action: ModLogAction;
     targetId: string;
-    targetName: string;
+    targetName?: string;
     moderatorId?: string;
     moderatorName?: string;
     reason?: string;
   }) {
-    let channelId: string | undefined;
-    let logMessageId: string | undefined;
+    try {
+      const resolvedTargetName =
+        targetName ?? (await this.resolveTargetName(guild, targetId));
 
-    if (!ConfigValidator.isFeatureEnabled("MOD_LOG_CHANNELS")) {
-      if (!this._warningLogged) {
-        ConfigValidator.logFeatureDisabled("Moderation Log", "MOD_LOG_CHANNELS");
-        this._warningLogged = true;
-      }
-    } else {
-      const logChannel = this.findLogChannel(guild);
+      let channelId: string | undefined;
+      let logMessageId: string | undefined;
 
-      if (logChannel?.isTextBased()) {
-        const embed = simpleEmbedExample();
-        embed.description =
-          `**Action:** ${action}\n` +
-          `**Target:** <@${targetId}> (${targetName})\n` +
-          `**Moderator:** ${moderatorId ? `<@${moderatorId}> (${moderatorName ?? "unknown"})` : "automod"}\n` +
-          (reason ? `**Reason:** ${reason}` : "");
-        embed.footer!.text = "modlog";
-
-        try {
-          const sent = await (logChannel as TextChannel).send({
-            embeds: [embed],
-            allowedMentions: { users: [], roles: [] },
-          });
-          channelId = logChannel.id;
-          logMessageId = sent.id;
-        } catch {
-          // Posting failed (missing perms, etc.) - still record to DB below
+      if (!ConfigValidator.isFeatureEnabled("MOD_LOG_CHANNELS")) {
+        if (!this._warningLogged) {
+          ConfigValidator.logFeatureDisabled("Moderation Log", "MOD_LOG_CHANNELS");
+          this._warningLogged = true;
         }
-      }
-    }
+      } else {
+        const logChannel = this.findLogChannel(guild);
 
-    const [entry] = await db
-      .insert(modLog)
-      .values({
-        guildId: guild.id,
-        action,
-        targetId,
-        moderatorId,
-        reason,
-        channelId,
-        logMessageId,
-      })
-      .returning();
+        if (logChannel?.isTextBased()) {
+          const embed: APIEmbed = {
+            color: RED_COLOR,
+            title: ACTION_TITLES[action],
+            description: [
+              `**Member:** <@${targetId}> (${resolvedTargetName})`,
+              `**Member ID:** ${targetId}`,
+              `**Moderator:** ${
+                moderatorId
+                  ? `<@${moderatorId}> (${moderatorName ?? "unknown"})`
+                  : "Automod"
+              }`,
+              `**Reason:** ${reason || "No reason provided"}`,
+            ].join("\n"),
+            timestamp: new Date().toISOString(),
+            footer: { text: "Mod Log", icon_url: BOT_ICON },
+          };
 
-    return entry;
-  }
-
-  static async getLogById(guildId: string, logId: number) {
-    return db.query.modLog.findFirst({
-      where: and(eq(modLog.id, logId), eq(modLog.guildId, guildId)),
-    });
-  }
-
-  /**
-   * Edits the reason on a past log entry, both in the DB and (if it's
-   * still findable) on the posted embed message itself.
-   */
-  static async editReason(
-    guild: Guild,
-    logId: number,
-    newReason: string,
-  ) {
-    const entry = await this.getLogById(guild.id, logId);
-    if (!entry) return null;
-
-    const [updated] = await db
-      .update(modLog)
-      .set({ reason: newReason })
-      .where(and(eq(modLog.id, logId), eq(modLog.guildId, guild.id)))
-      .returning();
-
-    if (entry.channelId && entry.logMessageId) {
-      try {
-        const channel = await guild.channels.fetch(entry.channelId);
-        if (channel?.isTextBased()) {
-          const message = await channel.messages.fetch(entry.logMessageId);
-          const embed = message.embeds[0];
-          if (embed) {
-            const description = (embed.description ?? "").replace(
-              /\*\*Reason:\*\*.*$/s,
-              `**Reason:** ${newReason}`,
-            );
-            await message.edit({
-              embeds: [{ ...embed.data, description }],
+          try {
+            const sent = await (logChannel as TextChannel).send({
+              embeds: [embed],
+              allowedMentions: { users: [], roles: [] },
             });
+            channelId = logChannel.id;
+            logMessageId = sent.id;
+          } catch {
+            // Posting failed (missing perms, deleted channel, etc.) - the
+            // DB row below still records the action, so nothing is lost.
           }
         }
-      } catch {
-        // Original message/channel no longer exists - DB record is still updated
       }
-    }
 
-    return updated;
+      const [entry] = await db
+        .insert(modLog)
+        .values({
+          guildId: guild.id,
+          action,
+          targetId,
+          moderatorId,
+          reason,
+          channelId,
+          logMessageId,
+        })
+        .returning();
+
+      return entry;
+    } catch (err) {
+      // Nothing in here should ever be able to break the moderation action
+      // that triggered it (e.g. targetId/moderatorId not yet synced to the
+      // Member table, a transient DB error, etc.) - log and move on.
+      console.error("[ModLogService] postLog failed:", err);
+      return null;
+    }
   }
 }

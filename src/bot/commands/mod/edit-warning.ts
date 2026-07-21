@@ -1,3 +1,4 @@
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
@@ -50,6 +51,11 @@ export class EditWarning {
         .catch(() => {});
     }
 
+    const previous = await WarningsService.getWarningById(
+      interaction.guildId,
+      warningId,
+    );
+
     const updated = await WarningsService.editWarning(
       interaction.guildId,
       warningId,
@@ -58,6 +64,17 @@ export class EditWarning {
 
     if (!updated) {
       return safeEditReply(interaction, `No warning found with ID #${warningId}`);
+    }
+
+    if (interaction.guild) {
+      await ModLogService.postLog({
+        guild: interaction.guild,
+        action: "edit-warning",
+        targetId: updated.memberId,
+        moderatorId: interaction.member?.user.id,
+        moderatorName: interaction.member?.user.username,
+        reason: `Warning #${warningId} changed from "${previous?.reason ?? "unknown"}" to "${newReason}"`,
+      });
     }
 
     return safeEditReply(interaction, `Updated warning #${warningId}`);

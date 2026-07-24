@@ -165,11 +165,6 @@ export const modLog = pgTable("ModLog", {
 			name: "ModLog_guildId_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
 	foreignKey({
-			columns: [table.targetId],
-			foreignColumns: [member.memberId],
-			name: "ModLog_targetId_fkey"
-		}).onUpdate("cascade").onDelete("cascade"),
-	foreignKey({
 			columns: [table.moderatorId],
 			foreignColumns: [member.memberId],
 			name: "ModLog_moderatorId_fkey"

@@ -14,7 +14,7 @@ export class DeleteMemberDb {
   @Slash({
     name: "delete-member-db",
     description: "delete specific member from this server's database",
-    defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
+    defaultMemberPermissions: PermissionFlagsBits.Administrator,
     dmPermission: false,
   })
   async deleteMemberDb(

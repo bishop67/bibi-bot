@@ -230,26 +230,76 @@ export class MessagesService {
     );
   }
 
-  // RFC-style path normalization: a ".." segment pops the previous path segment
-  // and "."/empty segments are dropped, but ".." can never pop above the path root
-  // (it cannot remove the host), matching how a browser resolves the URL.
-  static normalizeUrlPath(path: string) {
-    const out: string[] = [];
-    for (const segment of path.split("/")) {
-      if (segment === "..") out.pop();
-      else if (segment === "." || segment === "") continue;
-      else out.push(segment);
-    }
-    return "/" + out.join("/");
+  // Hosts where the first path segment is the invite code (discord.gg/CODE).
+  static readonly INVITE_CODE_HOSTS = new Set([
+    "discord.gg",
+    "dsc.gg",
+    "invite.gg",
+    "discord.io",
+    "discord.li",
+    "discord.me",
+    "discord.st",
+    "dis.gd",
+  ]);
+
+  // Hosts where the code sits under /invite/CODE.
+  static readonly INVITE_PATH_HOSTS = new Set([
+    "discord.com",
+    "discordapp.com",
+    "ptb.discord.com",
+    "canary.discord.com",
+  ]);
+
+  static readonly INVITE_HOST_PATTERN =
+    /discord\.gg|dsc\.gg|invite\.gg|discord\.(?:io|li|me|st)|dis\.gd|(?:ptb\.|canary\.)?discord(?:app)?\.com/i;
+
+  // Decode each maximal run of %XX bytes on its own. A single malformed escape
+  // (e.g. "%.") makes decodeURIComponent throw for the whole string, which would
+  // leave a percent-encoded invite hidden; Discord decodes what it can.
+  static decodePercentRuns(input: string) {
+    return input.replace(/(?:%[0-9a-f]{2})+/gi, (run) => {
+      try {
+        return decodeURIComponent(run);
+      } catch {
+        return run;
+      }
+    });
   }
 
-  // General invite parser: canonicalize the URL the way Discord's client would, then
-  // extract codes. Undoes invisible/zero-width chars, angle-bracket wrapping,
-  // blockquote (">") + newline splitting, whitespace/punctuation stuffing, defanged
-  // and unicode/full-width dots, backslashes, (double) percent-encoding, scheme +
-  // userinfo (evil@discord.gg) + port noise, and per-host path traversal. Matches
-  // discord.gg, discord(app).com/invite (+ ptb/canary), and third-party shorteners
-  // (dsc.gg, invite.gg, discord.io/li/me/st, dis.gd).
+  // Resolve one URL-ish candidate with the WHATWG parser - the same resolution the
+  // client performs via new URL() - so ports, userinfo, empty and dot segments all
+  // collapse exactly as they do for the link the user actually clicks.
+  static collectInviteCodes(candidate: string, sink: Set<string>) {
+    const withScheme = /^https?:\/\//i.test(candidate)
+      ? candidate
+      : "https://" + candidate.replace(/^\/+/, "");
+    let url: URL;
+    try {
+      url = new URL(withScheme);
+    } catch {
+      return;
+    }
+    const host = url.hostname.toLowerCase();
+    let path = url.pathname;
+    try {
+      path = decodeURIComponent(path);
+    } catch {}
+    const segments = path.split("/").filter(Boolean);
+    if (MessagesService.INVITE_CODE_HOSTS.has(host)) {
+      if (segments[0]) sink.add(segments[0].toLowerCase());
+    } else if (MessagesService.INVITE_PATH_HOSTS.has(host)) {
+      if (segments[0]?.toLowerCase() === "invite" && segments[1])
+        sink.add(segments[1].toLowerCase());
+    }
+  }
+
+  // Extract invite codes with the same resolution the Discord client applies.
+  // Tricks that live above the URL grammar are undone first (invisible chars,
+  // angle-bracket wrapping, defanged and unicode/full-width dots, backslashes,
+  // percent-encoding); the URL itself is then resolved by new URL(). Candidates are
+  // taken both per whitespace-delimited token (how a bare link is linkified) and
+  // from the whole message reflowed onto one line (how a blockquote-split URL is
+  // rejoined), so either shape resolves.
   static extractInviteCodes(raw: string) {
     let content = raw
       .replace(
@@ -257,42 +307,35 @@ export class MessagesService {
         "",
       )
       .replace(/[<>]/g, "")
-      .replace(/^\s*>+/gm, "")
       .replace(/[[(){}]\.[\])}]/g, ".")
       .replace(/[\u3002\uff0e\uff61\u2024]/g, ".")
-      .replace(/\\/g, "/")
-      .replace(/\s+/g, "");
+      .replace(/\\/g, "/");
     for (let i = 0; i < 3; i++) {
-      // Decode each maximal run of %XX bytes on its own. A single malformed
-      // escape (e.g. "%.") would make decodeURIComponent throw for the whole
-      // string; Discord decodes valid sequences and leaves bad ones literal.
-      const decoded = content.replace(/(?:%[0-9a-f]{2})+/gi, (run) => {
-        try {
-          return decodeURIComponent(run);
-        } catch {
-          return run;
-        }
-      });
+      const decoded = MessagesService.decodePercentRuns(content);
       if (decoded === content) break;
       content = decoded;
     }
-    content = content
-      .toLowerCase()
-      .replace(/https?:/g, "")
-      .replace(/(^|\/\/|\/)[^/\s]*@/g, "$1")
-      .replace(/:\d+(?=\/)/g, "");
-    const hostRegex =
-      /(discord\.gg|(?:ptb\.|canary\.)?discord(?:app)?\.com|dsc\.gg|invite\.gg|discord\.(?:io|li|me|st)|dis\.gd)(\/[^\s]*)?/gi;
-    const inviteRegex =
-      /^(?:discord\.gg|(?:ptb\.|canary\.)?discord(?:app)?\.com\/invite|dsc\.gg|invite\.gg|discord\.(?:io|li|me|st)|dis\.gd)\/([a-z0-9-]+)/i;
-    const codes: string[] = [];
-    for (const match of content.matchAll(hostRegex)) {
-      const host = match[1];
-      const path = match[2] ? MessagesService.normalizeUrlPath(match[2]) : "";
-      const invite = (host + path).match(inviteRegex);
-      if (invite) codes.push(invite[1]);
+
+    const codes = new Set<string>();
+    for (const token of content.split(/\s+/))
+      if (token && MessagesService.INVITE_HOST_PATTERN.test(token))
+        MessagesService.collectInviteCodes(token, codes);
+
+    const reflowed = content.replace(/^\s*>+/gm, "").replace(/\s+/g, "");
+    if (MessagesService.INVITE_HOST_PATTERN.test(reflowed)) {
+      const slices = reflowed.match(
+        new RegExp(
+          "(?:https?:\\/\\/|\\/\\/)?[a-z0-9.@:%-]*(?:" +
+            MessagesService.INVITE_HOST_PATTERN.source +
+            ")[^\\s]*",
+          "gi",
+        ),
+      );
+      if (slices)
+        for (const slice of slices)
+          MessagesService.collectInviteCodes(slice, codes);
     }
-    return codes;
+    return [...codes];
   }
 
   // Check warnings utility

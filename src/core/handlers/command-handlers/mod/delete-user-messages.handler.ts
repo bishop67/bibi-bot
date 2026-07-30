@@ -19,7 +19,9 @@ export async function executeDeleteUserMessages(
     memberId,
     jail,
     user: user ?? null,
-    reason: reason || "Manual moderation",
+    reason: reason
+      ? `${reason} (triggered by <@${interaction.user.id}>)`
+      : `Manual moderation (triggered by <@${interaction.user.id}>)`,
   };
 
   if (jail) {

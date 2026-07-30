@@ -1,10 +1,5 @@
 import { db } from "@/lib/db";
-import {
-  memberGuild,
-  memberRole,
-  memberMessages,
-  memberHelper,
-} from "@/lib/db-schema";
+import { memberRole, memberMessages, memberHelper } from "@/lib/db-schema";
 import { and, count, eq, ne } from "drizzle-orm";
 import { LEVEL_LIST } from "@/shared/config/levels";
 import {
@@ -162,25 +157,6 @@ export class RolesService {
           role.name !== newAddedRole &&
           args.newMember.roles.remove(role).catch(() => {}),
       );
-
-      // save original nickname for manual jail scenario
-      if (!args.newMember.partial && newAddedRole === JAIL) {
-        const displayName = args.newMember.nickname ?? null;
-        await db
-          .insert(memberGuild)
-          .values({
-            memberId: args.newMember.id,
-            guildId: args.newMember.guild.id,
-            preJailDisplayName: displayName,
-            status: false,
-          })
-          //  keep preJailDisplayName from jailUser() if already set, avoid overwriting with jail nickname
-          .onConflictDoUpdate({
-            target: [memberGuild.memberId, memberGuild.guildId],
-            set: { status: false },
-          })
-          .catch(() => {});
-      }
 
       // resolve role ID from guild cache (more reliable than member cache)
       const restrictedRoleId = args.guildRoles.find(

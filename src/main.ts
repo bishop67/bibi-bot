@@ -64,6 +64,22 @@ bot.on(
   (reaction, user) => void bot.executeReaction(reaction, user),
 );
 
+// discord.js rethrows an unhandled "error" event
+bot.on("error", (e) => botLogger.error("Discord client error", { error: String(e) }));
+
+bot.on("shardError", (e) => botLogger.error("Shard error", { error: String(e) }));
+
+// A transient network fault must degrade, not kill the process: the container's
+// restart policy can be defeated by a stale containerd task, turning a blip into
+// a permanent outage.
+process.on("unhandledRejection", (reason) => {
+  botLogger.error("Unhandled rejection", { error: String(reason) });
+});
+
+process.on("uncaughtException", (err) => {
+  botLogger.error("Uncaught exception", { error: String(err) });
+});
+
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   botLogger.info("Received SIGTERM, shutting down");
@@ -94,12 +110,23 @@ const main = async () => {
   });
 };
 
-setInterval(
-  () =>
-    fetch("https://isolated-emili-spectredev-9a803c60.koyeb.app/api/api").catch(
-      (e) => botLogger.error("Ping error", { error: String(e) }),
-    ),
-  300000,
-);
+const PING_URL = "https://isolated-emili-spectredev-9a803c60.koyeb.app/api/api";
+const PING_TIMEOUT_MS = 30_000;
 
-main();
+const ping = async () => {
+  try {
+    const res = await fetch(PING_URL, {
+      signal: AbortSignal.timeout(PING_TIMEOUT_MS),
+    });
+    res.body?.cancel().catch(() => {});
+  } catch (e) {
+    botLogger.warn("Ping failed", { error: String(e) });
+  }
+};
+
+setInterval(() => void ping(), 300000);
+
+main().catch((e) => {
+  botLogger.error("Fatal startup error", { error: String(e) });
+  process.exit(1);
+});

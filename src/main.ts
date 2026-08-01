@@ -120,9 +120,19 @@ const main = async () => {
 
   await bot.login(token);
 
-  bot.user?.setPresence({
-    activities: [{ name: ".gg/coding", type: ActivityType.Watching }],
-  });
+  bot.user?.setPresence(
+    PRIVILEGED_INTENTS_ENABLED
+      ? { activities: [{ name: ".gg/coding", type: ActivityType.Watching }] }
+      : {
+          status: "idle",
+          activities: [
+            {
+              name: "limited mode - scam filters offline",
+              type: ActivityType.Watching,
+            },
+          ],
+        },
+  );
 };
 
 const PING_URL = "https://isolated-emili-spectredev-9a803c60.koyeb.app/api/api";

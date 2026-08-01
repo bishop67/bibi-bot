@@ -35,6 +35,7 @@ interface FeatureBotEnvironment {
   SHOULD_LOG_VOICE_EVENTS: string;
   SHOULD_COUNT_MEMBERS: string;
   SHOULD_USER_LEVEL_UP: string;
+  PRIVILEGED_INTENTS_ENABLED: string;
 
   // Template Validation
   TEMPLATE_VALIDATION_CHANNELS: string;

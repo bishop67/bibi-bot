@@ -3,12 +3,22 @@ import { RolesService } from "@/core/services/roles/roles.service";
 import { DuplicateSpamService } from "@/core/services/spam/duplicate-spam.service";
 import { SpamDetectionService } from "@/core/services/spam/spam-detection.service";
 import { ThreadService } from "@/core/services/threads/thread.service";
+import { CAN_READ_MESSAGE_CONTENT } from "@/shared/config/features";
 import { ConfigValidator } from "@/shared/config/validator";
 import { translate } from "@/shared/integrations/deepl";
 import { Message, MessageType, TextChannel } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
 
 export async function handleMessageCreate(message: Message): Promise<void> {
+  // Without the MessageContent intent every message arrives with empty content,
+  // which would make the scam and invite filters report clean on everything.
+  // Skip them outright rather than let them pass traffic they cannot inspect.
+  if (!CAN_READ_MESSAGE_CONTENT) {
+    await MessagesService.addMessageDb(message);
+    await MessagesService.levelUpMessage(message);
+    return;
+  }
+
   const isSpam =
     await SpamDetectionService.detectSpamFirstMessageWithAi(message);
   if (isSpam) {

@@ -3,6 +3,7 @@ import "@dotenvx/dotenvx/config";
 import { AttachmentRefreshQueueService } from "@/core/services/attachments/attachment-refresh-queue.service";
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
+import { PRIVILEGED_INTENTS_ENABLED } from "@/shared/config/features";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Partials } from "discord.js";
 import { Client } from "discordx";
@@ -13,16 +14,30 @@ ConfigValidator.validateConfig();
 
 const token = process.env.TOKEN;
 
+// Requesting a privileged intent Discord has not granted closes the gateway with
+// 4014 and the process cannot start at all, so they are opt-in per environment.
+const privilegedIntents = PRIVILEGED_INTENTS_ENABLED
+  ? [
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildPresences,
+      GatewayIntentBits.MessageContent,
+    ]
+  : [];
+
+if (!PRIVILEGED_INTENTS_ENABLED) {
+  botLogger.warn(
+    "Running without privileged intents: member events, presence and message content are unavailable, so moderation filters and member tracking are disabled",
+  );
+}
+
 // discord client config
 export const bot = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent,
+    ...privilegedIntents,
   ],
   partials: [
     Partials.Message,

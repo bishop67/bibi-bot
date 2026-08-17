@@ -3,25 +3,28 @@ import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
 import type { CommandInteraction, User } from "discord.js";
-import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
+import { ApplicationCommandOptionType, MessageFlags } from "discord.js";
 import { Discord, Slash, SlashOption } from "discordx";
 
 @Discord()
 export class Warnings {
+  // Not permission-gated at the Discord level: anyone may look up their own
+  // record, and executeWarnings requires ManageRoles only to view someone
+  // else's. A member who cannot see where they stand has no warning of the
+  // jail coming at four.
   @Slash({
     name: "warnings",
-    description: "List a member's warnings",
-    defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
+    description: "List your warnings, or another member's if you can moderate",
     dmPermission: false,
   })
   async warnings(
     @SlashOption({
       name: "user",
-      description: "The member to look up",
-      required: true,
+      description: "The member to look up (defaults to yourself)",
+      required: false,
       type: ApplicationCommandOptionType.User,
     })
-    user: User,
+    user: User | undefined,
     @SlashOption({
       name: "page",
       description: "Page number (default 1)",
@@ -32,7 +35,17 @@ export class Warnings {
     page: number = 1,
     interaction: CommandInteraction,
   ) {
-    if (!(await safeDeferReply(interaction))) return;
+    // Your own record stays private; a moderator pulling up someone else keeps
+    // the existing in-channel behaviour.
+    const isSelf = !user || user.id === interaction.user.id;
+
+    if (
+      !(await safeDeferReply(
+        interaction,
+        isSelf ? { flags: MessageFlags.Ephemeral } : undefined,
+      ))
+    )
+      return;
 
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)

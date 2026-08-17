@@ -16,8 +16,31 @@ export async function executeWarn(
     return { error: "You can't warn a bot" };
   }
 
-  if (target.id === interaction.member?.user.id) {
+  if (target.id === interaction.user.id) {
     return { error: "You can't warn yourself" };
+  }
+
+  if (target.id === interaction.guild.ownerId) {
+    return { error: "You can't warn the server owner" };
+  }
+
+  // Discord gates this command on ManageRoles, which every moderator has - so
+  // without a rank check the newest of them can warn an admin, and at four
+  // warnings the automod would try to jail them.
+  const [targetMember, invoker] = await Promise.all([
+    interaction.guild.members.fetch(target.id).catch(() => null),
+    interaction.guild.members.fetch(interaction.user.id).catch(() => null),
+  ]);
+
+  if (
+    targetMember &&
+    invoker &&
+    invoker.id !== interaction.guild.ownerId &&
+    targetMember.roles.highest.position >= invoker.roles.highest.position
+  ) {
+    return {
+      error: "You can't warn someone whose highest role is above yours",
+    };
   }
 
   const { warning } = await WarningsService.addWarning({

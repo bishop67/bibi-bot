@@ -20,10 +20,12 @@ export async function executeWarn(
     return { error: "You can't warn yourself" };
   }
 
-  const warning = await WarningsService.addWarning({
+  const { warning } = await WarningsService.addWarning({
     guildId: interaction.guild.id,
     memberId: target.id,
+    username: target.username,
     moderatorId: interaction.member?.user.id,
+    moderatorName: interaction.member?.user.username,
     reason,
   });
 

@@ -1,4 +1,5 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { PrivacyService } from "@/core/services/privacy/privacy.service";
 import { db } from "@/lib/db";
 import { memberMessages, memberDeletedMessages, memberGuild } from "@/lib/db-schema";
@@ -351,11 +352,14 @@ export class MessagesService {
 
     if (inviteCodes.length === 0) return;
 
+    // Only moderate members this guild has already synced, so an unrelated
+    // guild's traffic can't create rows here.
     const memberGuildData = await db.query.memberGuild.findFirst({
       where: and(
         eq(memberGuild.memberId, member.id),
         eq(memberGuild.guildId, message.guild.id),
       ),
+      columns: { id: true },
     });
 
     if (!memberGuildData) return;
@@ -387,11 +391,19 @@ export class MessagesService {
     if (hasExternalInvite) {
       await message.delete();
 
-      const currentWarnings = memberGuildData.warnings + 1;
-
-      await db.update(memberGuild)
-        .set({ warnings: currentWarnings })
-        .where(eq(memberGuild.id, memberGuildData.id));
+      // Record the automod warning through WarningsService rather than bumping
+      // memberGuild.warnings directly. That column is derived from the
+      // MemberWarning rows, so incrementing it here would be undone the next
+      // time a moderator warns or clears anyone - silently resetting the
+      // member's progress toward the jail threshold.
+      const { warningCount: currentWarnings } = await WarningsService.addWarning(
+        {
+          guildId: message.guild.id,
+          memberId: member.id,
+          username: member.user.username,
+          reason: "Posted Discord invite links",
+        },
+      );
 
       if (currentWarnings < 4) {
         try {

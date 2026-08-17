@@ -1,3 +1,4 @@
+import { ensureMemberRows } from "@/core/services/members/ensure-member";
 import { db } from "@/lib/db";
 import { member, modLog } from "@/lib/db-schema";
 import { BOT_ICON, RED_COLOR } from "@/shared/config/branding";
@@ -123,6 +124,14 @@ export class ModLogService {
           }
         }
       }
+
+      // ModLog has FKs to Member for both target and moderator, so a user the
+      // bot has not synced yet would fail the insert below and the action would
+      // go unrecorded - see ensureMemberRows.
+      await ensureMemberRows([
+        { memberId: targetId, username: targetName ?? resolvedTargetName },
+        { memberId: moderatorId, username: moderatorName },
+      ]);
 
       const [entry] = await db
         .insert(modLog)

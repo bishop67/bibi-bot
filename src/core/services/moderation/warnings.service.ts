@@ -1,3 +1,4 @@
+import { ensureMemberRows } from "@/core/services/members/ensure-member";
 import { db } from "@/lib/db";
 import { member, memberGuild, memberWarning } from "@/lib/db-schema";
 import { and, count, desc, eq, sql } from "drizzle-orm";
@@ -5,8 +6,9 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 const PAGE_SIZE = 10;
 
 export class WarningsService {
-  // Keep memberGuild.warnings in sync so existing jail-escalation logic
-  // (checkWarnings in messages.service.ts) keeps working off the same counter.
+  // MemberWarning is the source of truth; memberGuild.warnings is a derived
+  // counter kept in sync so the jail-escalation logic (checkWarnings in
+  // messages.service.ts) reads the same number the warning list shows.
   private static async syncWarningCount(memberId: string, guildId: string) {
     const [result] = await db
       .select({ count: count() })
@@ -18,39 +20,53 @@ export class WarningsService {
         ),
       );
 
+    const warningCount = result?.count ?? 0;
+
     await db
       .insert(memberGuild)
       .values({
         memberId,
         guildId,
         status: true,
-        warnings: result?.count ?? 0,
+        warnings: warningCount,
       })
       .onConflictDoUpdate({
         target: [memberGuild.memberId, memberGuild.guildId],
-        set: { warnings: result?.count ?? 0 },
+        set: { warnings: warningCount },
       });
+
+    return warningCount;
   }
 
   static async addWarning({
     guildId,
     memberId,
+    username,
     moderatorId,
+    moderatorName,
     reason,
   }: {
     guildId: string;
     memberId: string;
+    username?: string;
     moderatorId?: string;
+    moderatorName?: string;
     reason: string;
   }) {
+    // MemberWarning has FKs to Member for both columns - see ensureMemberRows.
+    await ensureMemberRows([
+      { memberId, username },
+      { memberId: moderatorId, username: moderatorName },
+    ]);
+
     const [warning] = await db
       .insert(memberWarning)
       .values({ guildId, memberId, moderatorId, reason })
       .returning();
 
-    await this.syncWarningCount(memberId, guildId);
+    const warningCount = await this.syncWarningCount(memberId, guildId);
 
-    return warning;
+    return { warning, warningCount };
   }
 
   static async getWarnings(

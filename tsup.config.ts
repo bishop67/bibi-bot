@@ -16,7 +16,11 @@ function checkBotImports() {
       return statSync(p).isDirectory()
         ? getFiles(p)
         : e.endsWith(".ts") && e !== "index.ts"
-          ? [`./${relative(botDir, p).replace(/\.ts$/, "")}`]
+          ? // relative() yields backslashes on Windows while the imports in
+            // index.ts always use forward slashes, so without normalising here
+            // every file counts as both missing and stale and the check can
+            // never pass off Linux.
+            [`./${relative(botDir, p).replace(/\\/g, "/").replace(/\.ts$/, "")}`]
           : [];
     });
 

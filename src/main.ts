@@ -4,6 +4,7 @@ import { AttachmentRefreshQueueService } from "@/core/services/attachments/attac
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
+import { PRIVILEGED_INTENTS_ENABLED } from "@/shared/config/features";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
 import { Client } from "discordx";
@@ -23,18 +24,35 @@ if (!rawGuildId) {
   );
   throw Error("Could not find GUILD_ID in your environment");
 }
-const guildIds = rawGuildId.split(",").map((s) => s.trim()).filter(Boolean);
+const guildIds = rawGuildId
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+// Requesting a privileged intent Discord has not granted closes the gateway with
+// 4014 and the process cannot start at all, so they are opt-in per environment.
+const privilegedIntents = PRIVILEGED_INTENTS_ENABLED
+  ? [
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildPresences,
+      GatewayIntentBits.MessageContent,
+    ]
+  : [];
+
+if (!PRIVILEGED_INTENTS_ENABLED) {
+  botLogger.warn(
+    "Running without privileged intents: member events, presence and message content are unavailable, so moderation filters and member tracking are disabled",
+  );
+}
 
 // discord client config
 export const bot = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent,
+    ...privilegedIntents,
   ],
   partials: [
     Partials.Message,
@@ -111,6 +129,22 @@ bot.on(
   (reaction, user) => void bot.executeReaction(reaction, user),
 );
 
+// discord.js rethrows an unhandled "error" event
+bot.on("error", (e) => botLogger.error("Discord client error", { error: String(e) }));
+
+bot.on("shardError", (e) => botLogger.error("Shard error", { error: String(e) }));
+
+// A transient network fault must degrade, not kill the process: the container's
+// restart policy can be defeated by a stale containerd task, turning a blip into
+// a permanent outage.
+process.on("unhandledRejection", (reason) => {
+  botLogger.error("Unhandled rejection", { error: String(reason) });
+});
+
+process.on("uncaughtException", (err) => {
+  botLogger.error("Uncaught exception", { error: String(err) });
+});
+
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   botLogger.info("Received SIGTERM, shutting down");
@@ -118,14 +152,6 @@ process.on("SIGTERM", async () => {
   AttachmentRefreshQueueService.stop();
   await shutdownTelemetry();
   process.exit(0);
-});
-
-process.on("unhandledRejection", (reason) => {
-  console.error("UNHANDLED REJECTION:", reason);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION:", err);
 });
 
 process.on("SIGINT", async () => {
@@ -144,17 +170,22 @@ const main = async () => {
 
   await bot.login(token);
 
-  bot.user?.setPresence({
-    activities: [{ name: "HEX4", type: ActivityType.Watching }],
-  });
+  bot.user?.setPresence(
+    PRIVILEGED_INTENTS_ENABLED
+      ? { activities: [{ name: "HEX4", type: ActivityType.Watching }] }
+      : {
+          status: "idle",
+          activities: [
+            {
+              name: "limited mode - scam filters offline",
+              type: ActivityType.Watching,
+            },
+          ],
+        },
+  );
 };
 
-setInterval(
-  () =>
-    fetch("https://isolated-emili-spectredev-9a803c60.koyeb.app/api/api").catch(
-      (e) => botLogger.error("Ping error", { error: String(e) }),
-    ),
-  300000,
-);
-
-main().catch((err) => console.error("MAIN FAILED:", err));
+main().catch((e) => {
+  botLogger.error("Fatal startup error", { error: String(e) });
+  process.exit(1);
+});

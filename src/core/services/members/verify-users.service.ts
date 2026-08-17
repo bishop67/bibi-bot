@@ -157,6 +157,7 @@ export class VerifyAllUsersService {
                 if (role?.editable) await discordMember.roles.add(verifiedId);
               }
             }
+
             await MemberDataService.updateCompleteMemberData(discordMember);
           }
           processedIds.add(discordMember.id);

@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
 import { JAIL } from "@/shared/config/roles";
+import { TEMPLATE_VALIDATION_CHANNELS } from "@/shared/config/channels";
+import { ConfigValidator } from "@/shared/config/validator";
 import type { DeleteUserMessagesParams } from "@/types";
 import {
   ChannelType,
@@ -255,7 +257,17 @@ export class DeleteUserMessagesService {
         ch.name.toLowerCase().includes("jail"),
     ) as TextChannel | undefined;
 
-    if (!jailChannel) return;
+    const backupChannel = ConfigValidator.isFeatureEnabled(
+      "TEMPLATE_VALIDATION_CHANNELS",
+    )
+      ? (params.guild.channels.cache.find(
+          (ch) =>
+            ch.type === ChannelType.GuildText &&
+            TEMPLATE_VALIDATION_CHANNELS.includes(ch.name),
+        ) as TextChannel | undefined)
+      : undefined;
+
+    if (!jailChannel && !backupChannel) return;
 
     const dbMember = await db.query.member.findFirst({
       where: eq(member.memberId, params.memberId),
@@ -281,6 +293,14 @@ export class DeleteUserMessagesService {
       reason: params.reason,
     });
 
-    await jailChannel.send({ embeds: [embed] }).catch(error);
+    const payload = {
+      embeds: [embed],
+      allowedMentions: { users: [], roles: [] },
+    };
+
+    await Promise.all([
+      jailChannel?.send(payload).catch(error),
+      backupChannel?.send(payload).catch(error),
+    ]);
   }
 }

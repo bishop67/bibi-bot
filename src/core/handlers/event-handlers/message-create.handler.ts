@@ -2,11 +2,11 @@ import { MessagesService } from "@/core/services/messages/messages.service";
 import { RolesService } from "@/core/services/roles/roles.service";
 import { DuplicateSpamService } from "@/core/services/spam/duplicate-spam.service";
 import { SpamDetectionService } from "@/core/services/spam/spam-detection.service";
+import { isSpamExempt } from "@/core/services/spam/spam-exempt";
 import { ThreadService } from "@/core/services/threads/thread.service";
 import { CAN_READ_MESSAGE_CONTENT } from "@/shared/config/features";
 import { ConfigValidator } from "@/shared/config/validator";
 import { translate } from "@/shared/integrations/deepl";
-import { SPAM_EXEMPT_CHANNELS } from "@/shared/config/channels";
 import { Message, MessageType, TextChannel } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
 
@@ -20,20 +20,27 @@ export async function handleMessageCreate(message: Message): Promise<void> {
     return;
   }
 
-  const channelName = (message.channel as TextChannel)?.name ?? "";
-  const isSpamExemptChannel = SPAM_EXEMPT_CHANNELS.includes(channelName);
-
-  if (!isSpamExemptChannel) {
+  // A trusted channel or role exempts a message from every automated filter,
+  // the invite filter included. Gating only some of them is how a member with
+  // an exempt role still gets warned, and eventually jailed.
+  if (!isSpamExempt(message)) {
     const isSpam =
       await SpamDetectionService.detectSpamFirstMessageWithAi(message);
     if (isSpam) {
       return;
     }
 
-    await DuplicateSpamService.checkDuplicateSpam(message);
-  }
+    // Each of these deletes the message and warns or jails the author when it
+    // acts, so stop on the first hit. Carrying on would run the next filter
+    // over a message that no longer exists and then bank XP for it.
+    if (await DuplicateSpamService.checkDuplicateSpam(message)) {
+      return;
+    }
 
-  await MessagesService.checkWarnings(message);
+    if (await MessagesService.checkWarnings(message)) {
+      return;
+    }
+  }
 
   await MessagesService.addMessageDb(message);
 

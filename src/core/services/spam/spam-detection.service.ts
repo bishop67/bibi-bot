@@ -1,5 +1,5 @@
 import { AiSpamService } from "@/core/services/ai/ai-spam.service";
-import { SPAM_EXEMPT_ROLES } from "@/shared/config/roles";
+import { isSpamExempt } from "@/core/services/spam/spam-exempt";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { db } from "@/lib/db";
 import { memberMessages } from "@/lib/db-schema";
@@ -61,7 +61,7 @@ export class SpamDetectionService {
     if (!message.member || message.author.bot || !message.guildId) {
       return false;
     }
-    if (message.member?.roles.cache.some((r) => SPAM_EXEMPT_ROLES.includes(r.name))) {
+    if (isSpamExempt(message)) {
       return false;
     }
 

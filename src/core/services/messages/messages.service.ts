@@ -340,17 +340,19 @@ export class MessagesService {
     return [...codes];
   }
 
-  // Check warnings utility
-  static async checkWarnings(message: Message<boolean>) {
+  // Check warnings utility. Returns true when it acted on the message (deleted
+  // it and warned or jailed the author), so the caller can stop rather than
+  // record and level up a message that no longer exists.
+  static async checkWarnings(message: Message<boolean>): Promise<boolean> {
     const member = message.member;
 
-    if (!member || !message.guild) return;
+    if (!member || !message.guild) return false;
 
     const inviteCodes = [
       ...new Set(MessagesService.extractInviteCodes(message.content)),
     ].slice(0, 5);
 
-    if (inviteCodes.length === 0) return;
+    if (inviteCodes.length === 0) return false;
 
     // Only moderate members this guild has already synced, so an unrelated
     // guild's traffic can't create rows here.
@@ -362,7 +364,7 @@ export class MessagesService {
       columns: { id: true },
     });
 
-    if (!memberGuildData) return;
+    if (!memberGuildData) return false;
 
     let hasExternalInvite = false;
 
@@ -388,42 +390,42 @@ export class MessagesService {
       }
     }
 
-    if (hasExternalInvite) {
-      await message.delete();
+    if (!hasExternalInvite) return false;
 
-      // Record the automod warning through WarningsService rather than bumping
-      // memberGuild.warnings directly. That column is derived from the
-      // MemberWarning rows, so incrementing it here would be undone the next
-      // time a moderator warns or clears anyone - silently resetting the
-      // member's progress toward the jail threshold.
-      const { warningCount: currentWarnings } = await WarningsService.addWarning(
-        {
-          guildId: message.guild.id,
-          memberId: member.id,
-          username: member.user.username,
-          reason: "Posted Discord invite links",
-        },
-      );
+    await message.delete().catch(() => {});
 
-      if (currentWarnings < 4) {
-        try {
-          await member.send(
-            `Stop posting invites, you have been warned. Warnings: ${currentWarnings}, you will be muted at 3 warnings.`,
-          );
-        } catch (error) {}
-      } else {
-        await DeleteUserMessagesService.jailAndDeleteMessages({
-          jail: true,
-          memberId: member.id,
-          user: member.user,
-          guild: message.guild,
-          reason: `Posted Discord invite links (${currentWarnings} warnings)`,
-        });
+    // Record the automod warning through WarningsService rather than bumping
+    // memberGuild.warnings directly. That column is derived from the
+    // MemberWarning rows, so incrementing it here would be undone the next
+    // time a moderator warns or clears anyone - silently resetting the
+    // member's progress toward the jail threshold.
+    const { warningCount: currentWarnings } = await WarningsService.addWarning({
+      guildId: message.guild.id,
+      memberId: member.id,
+      username: member.user.username,
+      reason: "Posted Discord invite links",
+    });
 
-        try {
-          await member.send(`You have been muted asks a mod to unmute you.`);
-        } catch (error) {}
-      }
+    if (currentWarnings < 4) {
+      try {
+        await member.send(
+          `Stop posting invites, you have been warned. Warnings: ${currentWarnings}, you will be muted at 3 warnings.`,
+        );
+      } catch (error) {}
+    } else {
+      await DeleteUserMessagesService.jailAndDeleteMessages({
+        jail: true,
+        memberId: member.id,
+        user: member.user,
+        guild: message.guild,
+        reason: `Posted Discord invite links (${currentWarnings} warnings)`,
+      });
+
+      try {
+        await member.send(`You have been muted asks a mod to unmute you.`);
+      } catch (error) {}
     }
+
+    return true;
   }
 }

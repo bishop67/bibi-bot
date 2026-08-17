@@ -1,4 +1,5 @@
 import { MessagesService } from "@/core/services/messages/messages.service";
+import { isSpamExempt } from "@/core/services/spam/spam-exempt";
 import { ThreadService } from "@/core/services/threads/thread.service";
 import type { ArgsOf, Client } from "discordx";
 import { Discord, On } from "discordx";
@@ -18,7 +19,12 @@ export class MessageUpdate {
 
     if (oldMessage.content === message.content) return;
 
-    await MessagesService.checkWarnings(message);
+    // An edit can smuggle in an invite the original message never had, so it
+    // runs the same filter - and therefore honours the same exemptions.
+    if (!isSpamExempt(message)) {
+      // Acted on: the message is gone, so there is nothing left to sync.
+      if (await MessagesService.checkWarnings(message)) return;
+    }
 
     if (message.channel.isThread()) {
       await ThreadService.upsertThreadMessage(message);

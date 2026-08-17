@@ -17,6 +17,13 @@ export const SHOULD_USER_LEVEL_UP =
 export const PRIVILEGED_INTENTS_ENABLED =
   process.env.PRIVILEGED_INTENTS_ENABLED?.trim() !== "false";
 
+// Opt-out for the same reason. This was previously gated on DOCKER, which
+// conflated "am I containerised" with "should background jobs run": running
+// outside a container queued member updates forever and never drained them, so
+// display names, avatars and roles stayed empty with nothing reporting why.
+export const BACKGROUND_WORKERS_ENABLED =
+  process.env.BACKGROUND_WORKERS_ENABLED?.trim() !== "false";
+
 export const CAN_READ_MESSAGE_CONTENT = PRIVILEGED_INTENTS_ENABLED;
 
 export const CAN_TRACK_MEMBERS = PRIVILEGED_INTENTS_ENABLED;

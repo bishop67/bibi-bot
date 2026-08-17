@@ -3,7 +3,10 @@ import "@dotenvx/dotenvx/config";
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
-import { PRIVILEGED_INTENTS_ENABLED } from "@/shared/config/features";
+import {
+  BACKGROUND_WORKERS_ENABLED,
+  PRIVILEGED_INTENTS_ENABLED,
+} from "@/shared/config/features";
 import { validateGuildConfig } from "@/shared/config/guild-validator";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
@@ -72,7 +75,14 @@ export const bot = new Client({
 
 bot.once("clientReady", async () => {
   await bot.initApplicationCommands();
-  process.env.DOCKER && MemberUpdateQueueService.start();
+  if (BACKGROUND_WORKERS_ENABLED) {
+    MemberUpdateQueueService.start();
+  } else {
+    botLogger.warn(
+      "Background workers disabled: member updates will queue up and never be applied, so display names, avatars and roles will stay empty",
+    );
+  }
+
   botLogger.info("Bot started", { clientId: bot.user?.id });
 
   // Config is global but names are resolved per guild, so report anywhere a

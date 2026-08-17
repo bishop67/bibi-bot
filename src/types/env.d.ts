@@ -36,6 +36,7 @@ interface FeatureBotEnvironment {
   SHOULD_COUNT_MEMBERS: string;
   SHOULD_USER_LEVEL_UP: string;
   PRIVILEGED_INTENTS_ENABLED: string;
+  BACKGROUND_WORKERS_ENABLED: string;
 
   // Template Validation
   TEMPLATE_VALIDATION_CHANNELS: string;

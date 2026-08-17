@@ -349,6 +349,24 @@ export class MembersService {
       });
   }
 
+  /**
+   * Ensure the Guild row exists.
+   *
+   * MemberGuild, MemberRole and the rest all carry foreign keys to Guild, so
+   * nothing about a member can be written until this row is there. Only the
+   * stats, lookback and verify-users paths created it, none of which run at
+   * startup - so on a database that had never run one of them every member
+   * write failed with a foreign key violation.
+   */
+  static async upsertDbGuild(discordGuild: Guild): Promise<void> {
+    await db.insert(guild)
+      .values({ guildId: discordGuild.id, guildName: discordGuild.name })
+      .onConflictDoUpdate({
+        target: guild.guildId,
+        set: { guildName: discordGuild.name },
+      });
+  }
+
   static async setGuildLookback(
     guildId: string,
     guildName: string,

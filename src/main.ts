@@ -83,6 +83,9 @@ bot.once("clientReady", async () => {
 
   const backfillResults = await Promise.allSettled(
     bot.guilds.cache.map(async (guild) => {
+      // Every member row points at this one, so it has to land first.
+      await MembersService.upsertDbGuild(guild);
+
       const members = await Promise.race([
         guild.members.fetch(),
         new Promise<never>((_, reject) =>

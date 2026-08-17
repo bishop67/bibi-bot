@@ -91,6 +91,23 @@ export const healthServer = createServer(async (req, res) => {
     res.end(JSON.stringify({ status: "error" }));
     botLogger.error("Health check failed", { error: String(e) });
   }
-}).listen(PORT, () => {
+});
+
+// Without this, a taken port surfaces as an uncaught exception and the bot
+// carries on with no health server and nothing saying so - the monitor just
+// sees a dead endpoint and cannot tell that from a dead bot.
+healthServer.on("error", (e: NodeJS.ErrnoException) => {
+  if (e.code === "EADDRINUSE") {
+    botLogger.error(
+      "Health server could not start: port already in use. The bot keeps running, but health checks are unavailable - is another instance up?",
+      { port: PORT },
+    );
+    return;
+  }
+
+  botLogger.error("Health server error", { port: PORT, error: String(e) });
+});
+
+healthServer.listen(PORT, () => {
   botLogger.info("Health server started", { port: PORT });
 });

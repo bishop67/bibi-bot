@@ -14,7 +14,6 @@ interface FeatureBotEnvironment {
   // AI Features
   KLIPY_API_KEY: string;
   GOOGLE_GENERATIVE_AI_API_KEY: string;
-  DEEPL: string;
 
   // Role System Features
   STAFF_ROLES: string;

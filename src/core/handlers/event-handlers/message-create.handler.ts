@@ -5,9 +5,7 @@ import { SpamDetectionService } from "@/core/services/spam/spam-detection.servic
 import { isSpamExempt } from "@/core/services/spam/spam-exempt";
 import { ThreadService } from "@/core/services/threads/thread.service";
 import { CAN_READ_MESSAGE_CONTENT } from "@/shared/config/features";
-import { ConfigValidator } from "@/shared/config/validator";
-import { translate } from "@/shared/integrations/deepl";
-import { Message, MessageType, TextChannel } from "discord.js";
+import { Message } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
 
 export async function handleMessageCreate(message: Message): Promise<void> {
@@ -72,31 +70,4 @@ export async function handleCheckThreadHelpLike(
     guildId: message.guildId!,
     message: previousMessage,
   });
-}
-
-export async function handleTranslateReply(
-  command: SimpleCommandMessage,
-): Promise<void> {
-  if (!ConfigValidator.isFeatureEnabled("DEEPL")) {
-    ConfigValidator.logFeatureDisabled("Translation", "DEEPL");
-    return;
-  }
-
-  const message = command.message;
-  if (message.type === MessageType.Reply && message.reference?.messageId) {
-    const channel = (
-      message.channel.partial ? await message.channel.fetch() : message.channel
-    ) as TextChannel;
-
-    const replyMsg = await channel.messages.fetch(message.reference?.messageId);
-
-    await message.delete();
-
-    channel.send({
-      content: await translate(
-        Buffer.from(replyMsg.content, "utf-8").toString(),
-      ),
-      allowedMentions: { users: [], roles: [] },
-    });
-  }
 }

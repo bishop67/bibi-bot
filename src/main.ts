@@ -190,6 +190,24 @@ const main = async () => {
   );
 };
 
+const PING_URL = "https://isolated-emili-spectredev-9a803c60.koyeb.app/api/api";
+const PING_TIMEOUT_MS = 30_000;
+
+// Keepalive against spectre's endpoint. Outbound only, and failures are logged
+// rather than thrown, so it can never take the bot down with it.
+const ping = async () => {
+  try {
+    const res = await fetch(PING_URL, {
+      signal: AbortSignal.timeout(PING_TIMEOUT_MS),
+    });
+    res.body?.cancel().catch(() => {});
+  } catch (e) {
+    botLogger.warn("Ping failed", { error: String(e) });
+  }
+};
+
+setInterval(() => void ping(), 300000);
+
 main().catch((e) => {
   botLogger.error("Fatal startup error", { error: String(e) });
   process.exit(1);

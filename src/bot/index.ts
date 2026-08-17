@@ -43,6 +43,5 @@ import "./commands/user/members";
 import "./commands/user/privacy";
 import "./commands/user/report";
 import "./commands/user/top";
-import "./commands/user/translate";
 import "./commands/user/user";
 import "./commands/user/time";

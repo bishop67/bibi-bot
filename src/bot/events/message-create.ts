@@ -3,7 +3,6 @@ import { Discord, On, SimpleCommand } from "discordx";
 import {
   handleCheckThreadHelpLike,
   handleMessageCreate,
-  handleTranslateReply,
 } from "@/core/handlers/event-handlers/message-create.handler";
 
 @Discord()
@@ -21,8 +20,4 @@ export class MessageCreate {
     await handleCheckThreadHelpLike(command);
   }
 
-  @SimpleCommand({ aliases: ["translate", "explain", "slate"], prefix: "/" })
-  async translateReply(command: SimpleCommandMessage) {
-    await handleTranslateReply(command);
-  }
 }

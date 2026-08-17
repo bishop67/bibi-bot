@@ -10,11 +10,6 @@ interface ConfigCheck {
 export class ConfigValidator {
   private static checks: ConfigCheck[] = [
     {
-      key: "DEEPL",
-      required: false,
-      feature: "Translation",
-    },
-    {
       key: "GOOGLE_GENERATIVE_AI_API_KEY",
       required: false,
       feature: "AI Chat & Spam Detection",

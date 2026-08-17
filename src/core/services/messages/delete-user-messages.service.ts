@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
-import { JAIL } from "@/shared/config/roles";
+import { JAIL, STAFF_ROLES } from "@/shared/config/roles";
 import { TEMPLATE_VALIDATION_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
 import type { DeleteUserMessagesParams } from "@/types";
@@ -22,7 +22,9 @@ import {
 import { error, log } from "node:console";
 
 const CHANNEL_CONCURRENCY = 3;
-const MAX_DELETE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const DEFAULT_DELETE_AGE_DAYS = 7;
+// Discord's bulk delete refuses messages older than this.
+const MAX_DELETE_AGE_DAYS = 14;
 
 async function runWithConcurrency<T>(
   tasks: (() => Promise<T>)[],
@@ -57,8 +59,48 @@ export class DeleteUserMessagesService {
    * Returns as soon as the jail is applied.
    */
   static async jailAndDeleteMessages(params: DeleteUserMessagesParams) {
+    if (params.automated && (await this.isAutoJailExempt(params))) return;
+
     await this.jailUser(params);
+
+    if (params.deleteMessages === false) return;
     this.deleteUserMessages(params).catch(error);
+  }
+
+  /**
+   * Staff are never jailed by the bot's own decision.
+   *
+   * They keep getting warned and having offending messages removed - only the
+   * automatic escalation to a jail is withheld, because a moderator locking
+   * themselves out over a link or a malformed forum post is worse than the
+   * thing being moderated. A moderator can still jail a colleague by hand.
+   */
+  private static async isAutoJailExempt(
+    params: DeleteUserMessagesParams,
+  ): Promise<boolean> {
+    if (!STAFF_ROLES.length) return false;
+
+    const memberId = params.user?.id || params.memberId;
+    const discordMember =
+      params.guild.members.cache.get(memberId) ||
+      (await params.guild.members.fetch(memberId).catch(() => null));
+
+    if (!discordMember) return false;
+
+    const staffRole = discordMember.roles.cache.find((role) =>
+      STAFF_ROLES.includes(role.name),
+    );
+
+    if (!staffRole) return false;
+
+    botLogger.info("Skipped auto-jail for staff member", {
+      guildId: params.guild.id,
+      memberId,
+      staffRole: staffRole.name,
+      reason: params.reason,
+    });
+
+    return true;
   }
 
   /**
@@ -132,14 +174,17 @@ export class DeleteUserMessagesService {
   }
 
   /**
-   * Delete user messages across all channels. Scoped to last 14 days.
+   * Delete user messages across all channels, within the requested window.
    */
   static async deleteUserMessages(params: DeleteUserMessagesParams) {
     log(
       `[DeleteUserMessages] Starting message deletion for user ${params.memberId} in guild ${params.guild.name}`,
     );
     let totalDeleted = 0;
-    const cutoff = Date.now() - MAX_DELETE_AGE_MS;
+    // Discord will not bulk-delete anything older than 14 days, so clamp
+    // rather than silently doing nothing for a larger number.
+    const days = Math.min(Math.max(params.days ?? DEFAULT_DELETE_AGE_DAYS, 1), MAX_DELETE_AGE_DAYS);
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
     const deleteMessages = async (channel: GuildTextBasedChannel) => {
       try {

@@ -144,6 +144,7 @@ export class SpamDetectionService {
 
       if (result.isSpam && result.confidence !== "low") {
         await DeleteUserMessagesService.jailAndDeleteMessages({
+          automated: true,
           jail: true,
           memberId: message.author.id,
           user: message.author,

@@ -119,6 +119,22 @@ export interface DeleteUserMessagesParams {
   memberId: string;
   jail: string | number | boolean;
   reason?: string;
+  /**
+   * Skip message deletion entirely and only apply the jail. Defaults to
+   * deleting.
+   */
+  deleteMessages?: boolean;
+  /**
+   * How many days back to delete. Discord refuses to bulk-delete anything
+   * older than 14 days, so values above that silently do nothing.
+   */
+  days?: number;
+  /**
+   * Set by the automated filters. A staff member can still be jailed by a
+   * moderator running the command by hand - this only exempts them from the
+   * bot deciding to do it on its own.
+   */
+  automated?: boolean;
 }
 
 // Roles service types

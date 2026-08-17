@@ -43,6 +43,22 @@ export class DeleteUserMessages {
       required: false,
     })
     reason: string | undefined,
+    @SlashOption({
+      name: "delete-messages",
+      description: "Delete their recent messages (default: true)",
+      type: ApplicationCommandOptionType.Boolean,
+      required: false,
+    })
+    deleteMessages: boolean = true,
+    @SlashOption({
+      name: "days",
+      description: "How many days back to delete (default 7, max 14)",
+      type: ApplicationCommandOptionType.Integer,
+      minValue: 1,
+      maxValue: 14,
+      required: false,
+    })
+    days: number | undefined,
     interaction: CommandInteraction,
   ) {
     if (!(await safeDeferReply(interaction))) return;
@@ -63,6 +79,8 @@ export class DeleteUserMessages {
       userId,
       jail,
       reason,
+      deleteMessages,
+      days,
     );
 
     if (result.error) {

@@ -428,6 +428,7 @@ export class MessagesService {
       } catch (error) {}
     } else {
       await DeleteUserMessagesService.jailAndDeleteMessages({
+        automated: true,
         jail: true,
         memberId: member.id,
         user: member.user,

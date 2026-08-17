@@ -3,6 +3,7 @@ import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { RolesService } from "@/core/services/roles/roles.service";
 import { ThreadService } from "@/core/services/threads/thread.service";
 import { db } from "@/lib/db";
+import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
 import { JAIL } from "@/shared/config/roles";
@@ -67,7 +68,22 @@ export class DeleteUserMessagesService {
   static async jailUser(params: DeleteUserMessagesParams) {
     const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]
       ?.id;
-    if (!jailRoleId) return;
+
+    // Returning quietly here means a spammer the filters already decided to
+    // mute just carries on, with nothing anywhere to say why.
+    if (!jailRoleId) {
+      botLogger.error(
+        "Cannot jail member: this guild has no role matching the configured jail name",
+        {
+          guildId: params.guild.id,
+          guildName: params.guild.name,
+          memberId: params.memberId,
+          jailRoleName: JAIL ?? "(STATUS_ROLES has no jail entry)",
+          reason: params.reason,
+        },
+      );
+      return;
+    }
 
     const memberId = params.user?.id || params.memberId;
     const discordMember =

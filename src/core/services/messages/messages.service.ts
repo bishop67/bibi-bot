@@ -1,4 +1,5 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { PrivacyService } from "@/core/services/privacy/privacy.service";
 import { db } from "@/lib/db";
@@ -399,11 +400,24 @@ export class MessagesService {
     // MemberWarning rows, so incrementing it here would be undone the next
     // time a moderator warns or clears anyone - silently resetting the
     // member's progress toward the jail threshold.
+    const reason = "Posted Discord invite links";
+
     const { warningCount: currentWarnings } = await WarningsService.addWarning({
       guildId: message.guild.id,
       memberId: member.id,
       username: member.user.username,
-      reason: "Posted Discord invite links",
+      reason,
+    });
+
+    // Automod acts without a moderator, so without this the audit trail has
+    // holes exactly where nobody was watching. Omitting moderatorId is what
+    // makes the entry read as "Automod".
+    await ModLogService.postLog({
+      guild: message.guild,
+      action: "warn",
+      targetId: member.id,
+      targetName: member.user.username,
+      reason: `${reason} (warning ${currentWarnings})`,
     });
 
     if (currentWarnings < 4) {

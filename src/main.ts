@@ -5,6 +5,7 @@ import { MemberUpdateQueueService } from "@/core/services/members/member-update-
 import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
 import { PRIVILEGED_INTENTS_ENABLED } from "@/shared/config/features";
+import { validateGuildConfig } from "@/shared/config/guild-validator";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
 import { Client } from "discordx";
@@ -75,6 +76,10 @@ bot.once("clientReady", async () => {
   process.env.DOCKER && MemberUpdateQueueService.start();
   process.env.DOCKER && AttachmentRefreshQueueService.start();
   botLogger.info("Bot started", { clientId: bot.user?.id });
+
+  // Config is global but names are resolved per guild, so report anywhere a
+  // configured role or channel does not actually exist.
+  validateGuildConfig(bot);
 
   const BACKFILL_TIMEOUT_MS = 60_000;
 

@@ -1,7 +1,6 @@
 import { Type as t } from "@sinclair/typebox/type";
 import { createSelectSchema } from "drizzle-typebox";
 import {
-  attachment,
   guild,
   guildVoiceEvents,
   member,
@@ -13,10 +12,6 @@ import {
   memberRole,
   memberUpdateQueue,
   syncProgress,
-  tag,
-  thread,
-  threadMessage,
-  threadTag,
 } from "./schema";
 
 // Guild schemas
@@ -107,57 +102,6 @@ export const guildVoiceEventsSelectSchema = createSelectSchema(guildVoiceEvents,
 });
 export type GuildVoiceEvents = typeof guildVoiceEventsSelectSchema.static;
 export const guildVoiceEventsInsertSchema = t.Omit(guildVoiceEventsSelectSchema, ["id", "join"]);
-
-// Thread schemas
-export const threadSelectSchema = createSelectSchema(thread, {
-  id: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-  authorId: t.String({ minLength: 17, maxLength: 20 }),
-  name: t.String({ minLength: 1, maxLength: 100 }),
-});
-export type Thread = typeof threadSelectSchema.static;
-export const threadInsertSchema = t.Omit(threadSelectSchema, ["updatedAt"]);
-export const threadUpdateSchema = t.Partial(t.Omit(threadSelectSchema, ["id", "guildId"]));
-
-// ThreadMessage schemas
-export const threadMessageSelectSchema = createSelectSchema(threadMessage, {
-  id: t.String({ minLength: 17, maxLength: 20 }),
-  threadId: t.String({ minLength: 17, maxLength: 20 }),
-  authorId: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-});
-export type ThreadMessage = typeof threadMessageSelectSchema.static;
-export const threadMessageInsertSchema = t.Omit(threadMessageSelectSchema, []);
-export const threadMessageUpdateSchema = t.Partial(t.Omit(threadMessageSelectSchema, ["id", "threadId", "authorId", "guildId"]));
-
-// Tag schemas
-export const tagSelectSchema = createSelectSchema(tag, {
-  id: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-  name: t.String({ minLength: 1, maxLength: 50 }),
-});
-export type Tag = typeof tagSelectSchema.static;
-export const tagInsertSchema = tagSelectSchema;
-
-// ThreadTag schemas
-export const threadTagSelectSchema = createSelectSchema(threadTag, {
-  threadId: t.String({ minLength: 17, maxLength: 20 }),
-  tagId: t.String({ minLength: 17, maxLength: 20 }),
-});
-export type ThreadTag = typeof threadTagSelectSchema.static;
-export const threadTagInsertSchema = threadTagSelectSchema;
-
-// Attachment schemas
-export const attachmentSelectSchema = createSelectSchema(attachment, {
-  id: t.String({ minLength: 17, maxLength: 20 }),
-  messageId: t.String({ minLength: 17, maxLength: 20 }),
-  url: t.String({ format: "uri" }),
-  proxyUrl: t.String({ format: "uri" }),
-  name: t.String({ minLength: 1, maxLength: 256 }),
-});
-export type Attachment = typeof attachmentSelectSchema.static;
-export const attachmentInsertSchema = t.Omit(attachmentSelectSchema, ["failedRefreshAttempts"]);
-export const attachmentUpdateSchema = t.Partial(t.Omit(attachmentSelectSchema, ["id", "messageId"]));
 
 // SyncProgress schemas
 export const syncProgressSelectSchema = createSelectSchema(syncProgress, {

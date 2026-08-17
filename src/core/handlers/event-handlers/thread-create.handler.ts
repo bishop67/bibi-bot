@@ -5,7 +5,7 @@ import {
 } from "@/core/embeds/template-validation.embed";
 import { AiTemplateService } from "@/core/services/ai/ai-template.service";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
-import { ThreadService } from "@/core/services/threads/thread.service";
+import { getThreadTypeFromChannel } from "@/shared/config/thread-types";
 import { botLogger } from "@/lib/telemetry";
 import type { ValidatedBoardType } from "@/shared/ai/prompts";
 import type { TemplateValidationResult } from "@/types";
@@ -38,21 +38,11 @@ export async function handleThreadCreate(
     return;
   }
 
-  const threadType = ThreadService.getThreadTypeFromChannel(thread.parent);
-
-  await ThreadService.upsertTags(thread.guildId, thread.parent.availableTags);
+  const threadType = getThreadTypeFromChannel(thread.parent);
 
   if (newlyCreated && isValidatedBoard(threadType)) {
-    // Upsert thread without syncing messages first, validation may delete the thread
-    await ThreadService.upsertThread(thread, threadType);
-
     const isValid = await validateForumPost(thread, threadType);
     if (!isValid) return;
-
-    // Only sync messages after validation passes
-    await ThreadService.syncThreadMessages(thread);
-  } else {
-    await ThreadService.upsertThread(thread, threadType, { syncMessages: true });
   }
 
   if (newlyCreated) {
@@ -234,9 +224,6 @@ async function validateForumPost(
         error: String(deleteError)
       });
     }
-
-    // Clean up DB records for the deleted thread
-    await ThreadService.deleteThread(thread.id);
 
     return false;
   } catch (error) {

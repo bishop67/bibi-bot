@@ -10,8 +10,6 @@ import "./events/message-reaction-add";
 import "./events/message-update";
 import "./events/presence-update";
 import "./events/thread-create";
-import "./events/thread-delete";
-import "./events/thread-update";
 import "./events/user-update";
 import "./events/voice-stateupdate";
 
@@ -31,7 +29,6 @@ import "./commands/mod/log-deleted-messages-history";
 import "./commands/mod/lookback-members";
 import "./commands/mod/status";
 import "./commands/mod/top-warnings";
-import "./commands/mod/verify-threads";
 import "./commands/mod/verify-users";
 import "./commands/mod/warn";
 import "./commands/mod/warnings";

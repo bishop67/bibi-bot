@@ -1,7 +1,6 @@
 import { userJailedEmbed } from "@/core/embeds/user-jailed.embed";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { RolesService } from "@/core/services/roles/roles.service";
-import { ThreadService } from "@/core/services/threads/thread.service";
 import { db } from "@/lib/db";
 import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
@@ -183,10 +182,8 @@ export class DeleteUserMessagesService {
       } catch (err) {
         if (err instanceof DiscordAPIError && err.code === 10003) {
           log(
-            `[DeleteUserMessages] Channel ${channel.id} no longer exists, cleaning up DB records`,
+            `[DeleteUserMessages] Channel ${channel.id} no longer exists, skipping`,
           );
-          if (channel.isThread())
-            await ThreadService.deleteThread(channel.id);
           return;
         }
         error(err);
@@ -206,9 +203,8 @@ export class DeleteUserMessagesService {
       } catch (err) {
         if (err instanceof DiscordAPIError && err.code === 10003) {
           log(
-            `[DeleteUserMessages] Thread ${thread.id} no longer exists, cleaning up DB records`,
+            `[DeleteUserMessages] Thread ${thread.id} no longer exists, skipping`,
           );
-          await ThreadService.deleteThread(thread.id);
           return;
         }
         error(err);

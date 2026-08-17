@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { guild, guildVoiceEvents, member, memberGuild, memberRole, memberCommandHistory, memberDeletedMessages, memberHelper, memberMessages, memberWarning, modLog, tag, thread, threadMessage, attachment, threadTag } from "./schema";
+import { guild, guildVoiceEvents, member, memberGuild, memberRole, memberCommandHistory, memberDeletedMessages, memberHelper, memberMessages, memberWarning, modLog } from "./schema";
 
 
 export const guildVoiceEventsRelations = relations(guildVoiceEvents, ({one}) => ({
@@ -23,9 +23,6 @@ export const guildRelations = relations(guild, ({many}) => ({
 	memberWarnings: many(memberWarning),
 	modLogs: many(modLog),
 	memberMessages: many(memberMessages),
-	tags: many(tag),
-	threadMessages: many(threadMessage),
-	threads: many(thread),
 }));
 
 export const memberRelations = relations(member, ({many}) => ({
@@ -53,8 +50,6 @@ export const memberRelations = relations(member, ({many}) => ({
 		relationName: "modLog_moderator"
 	}),
 	memberMessages: many(memberMessages),
-	threadMessages: many(threadMessage),
-	threads: many(thread),
 }));
 
 export const modLogRelations = relations(modLog, ({one}) => ({
@@ -160,60 +155,5 @@ export const memberMessagesRelations = relations(memberMessages, ({one}) => ({
 	member: one(member, {
 		fields: [memberMessages.memberId],
 		references: [member.memberId]
-	}),
-}));
-
-export const tagRelations = relations(tag, ({one, many}) => ({
-	guild: one(guild, {
-		fields: [tag.guildId],
-		references: [guild.guildId]
-	}),
-	threadTags: many(threadTag),
-}));
-
-export const threadMessageRelations = relations(threadMessage, ({one, many}) => ({
-	thread: one(thread, {
-		fields: [threadMessage.threadId],
-		references: [thread.id]
-	}),
-	member: one(member, {
-		fields: [threadMessage.authorId],
-		references: [member.memberId]
-	}),
-	guild: one(guild, {
-		fields: [threadMessage.guildId],
-		references: [guild.guildId]
-	}),
-	attachments: many(attachment),
-}));
-
-export const threadRelations = relations(thread, ({one, many}) => ({
-	threadMessages: many(threadMessage),
-	guild: one(guild, {
-		fields: [thread.guildId],
-		references: [guild.guildId]
-	}),
-	member: one(member, {
-		fields: [thread.authorId],
-		references: [member.memberId]
-	}),
-	threadTags: many(threadTag),
-}));
-
-export const attachmentRelations = relations(attachment, ({one}) => ({
-	threadMessage: one(threadMessage, {
-		fields: [attachment.messageId],
-		references: [threadMessage.id]
-	}),
-}));
-
-export const threadTagRelations = relations(threadTag, ({one}) => ({
-	thread: one(thread, {
-		fields: [threadTag.threadId],
-		references: [thread.id]
-	}),
-	tag: one(tag, {
-		fields: [threadTag.tagId],
-		references: [tag.id]
 	}),
 }));

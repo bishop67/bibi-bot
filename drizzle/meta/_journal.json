@@ -29,6 +29,13 @@
       "when": 1784025437448,
       "tag": "0003_known_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786988211004,
+      "tag": "0004_drop_site_tables",
+      "breakpoints": true
     }
   ]
 }

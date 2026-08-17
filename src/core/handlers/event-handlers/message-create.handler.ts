@@ -3,7 +3,6 @@ import { RolesService } from "@/core/services/roles/roles.service";
 import { DuplicateSpamService } from "@/core/services/spam/duplicate-spam.service";
 import { SpamDetectionService } from "@/core/services/spam/spam-detection.service";
 import { isSpamExempt } from "@/core/services/spam/spam-exempt";
-import { ThreadService } from "@/core/services/threads/thread.service";
 import { CAN_READ_MESSAGE_CONTENT } from "@/shared/config/features";
 import { Message } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
@@ -41,8 +40,6 @@ export async function handleMessageCreate(message: Message): Promise<void> {
   }
 
   await MessagesService.addMessageDb(message);
-
-  await ThreadService.upsertThreadMessage(message);
   
   await MessagesService.levelUpMessage(message);
 }

@@ -3,7 +3,6 @@ import {
   memberDeletedMessages,
   memberGuild,
   memberMessages,
-  threadMessage,
 } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
 
@@ -122,14 +121,6 @@ export class PrivacyService {
           and(
             eq(memberDeletedMessages.messageMemberId, memberId),
             eq(memberDeletedMessages.guildId, guildId),
-          ),
-        ),
-      db
-        .delete(threadMessage)
-        .where(
-          and(
-            eq(threadMessage.authorId, memberId),
-            eq(threadMessage.guildId, guildId),
           ),
         ),
     ]);

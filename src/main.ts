@@ -1,6 +1,5 @@
 import "@dotenvx/dotenvx/config";
 
-import { AttachmentRefreshQueueService } from "@/core/services/attachments/attachment-refresh-queue.service";
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
@@ -10,7 +9,7 @@ import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
 import { Client } from "discordx";
 import "./bot";
-import "./elysia";
+import "./health";
 
 
 ConfigValidator.validateConfig();
@@ -74,7 +73,6 @@ export const bot = new Client({
 bot.once("clientReady", async () => {
   await bot.initApplicationCommands();
   process.env.DOCKER && MemberUpdateQueueService.start();
-  process.env.DOCKER && AttachmentRefreshQueueService.start();
   botLogger.info("Bot started", { clientId: bot.user?.id });
 
   // Config is global but names are resolved per guild, so report anywhere a
@@ -154,7 +152,6 @@ process.on("uncaughtException", (err) => {
 process.on("SIGTERM", async () => {
   botLogger.info("Received SIGTERM, shutting down");
   MemberUpdateQueueService.stop();
-  AttachmentRefreshQueueService.stop();
   await shutdownTelemetry();
   process.exit(0);
 });
@@ -162,7 +159,6 @@ process.on("SIGTERM", async () => {
 process.on("SIGINT", async () => {
   botLogger.info("Received SIGINT, shutting down");
   MemberUpdateQueueService.stop();
-  AttachmentRefreshQueueService.stop();
   await shutdownTelemetry();
   process.exit(0);
 });

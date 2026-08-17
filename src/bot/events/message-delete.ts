@@ -1,5 +1,4 @@
 import { MessagesService } from "@/core/services/messages/messages.service";
-import { ThreadService } from "@/core/services/threads/thread.service";
 import type { ArgsOf, Client } from "discordx";
 import { Discord, On } from "discordx";
 
@@ -8,11 +7,6 @@ export class MessageDelete {
   @On()
   async messageDelete([message]: ArgsOf<"messageDelete">, client: Client) {
     MessagesService.deleteMessageDb(message);
-
-    // Delete from ThreadReply table if it's a thread message
-    if (message.channel.isThread()) {
-      await ThreadService.deleteThreadMessage(message.id);
-    }
 
     MessagesService.saveDeletedMessageHistory(message);
   }

@@ -8,6 +8,7 @@ import { threadRoutes } from "@/api/routes/thread.routes";
 import { userRoutes } from "@/api/routes/user.routes";
 import { widgetRoutes } from "@/api/routes/widget.routes";
 import { adminRoutes } from "@/api/routes/admin.routes";
+import { healthRoutes } from "@/api/routes/health.routes";
 import { apiLogger } from "@/lib/telemetry";
 import { cors } from "@elysiajs/cors";
 import { node } from "@elysiajs/node";
@@ -40,6 +41,7 @@ export const app = new Elysia({ adapter: node() })
       console.error(`Error [${path}]:`, error.message);
     }
   })
+  .use(healthRoutes)
   .use(staffRoutes)
   .use(newsRoutes)
   .use(widgetRoutes)

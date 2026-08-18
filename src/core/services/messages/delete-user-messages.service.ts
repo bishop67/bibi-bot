@@ -1,4 +1,8 @@
 import { userJailedEmbed } from "@/core/embeds/user-jailed.embed";
+import {
+  hasDeleteExemptRole,
+  isDeleteProtected,
+} from "@/core/services/messages/delete-exempt";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { RolesService } from "@/core/services/roles/roles.service";
 import { db } from "@/lib/db";
@@ -101,6 +105,8 @@ export class DeleteUserMessagesService {
    * Apply jail role, update DB, send notification. Fast operation (~2s).
    */
   static async jailUser(params: DeleteUserMessagesParams) {
+    await this.captureDeleteExemption(params);
+
     const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]
       ?.id;
 
@@ -269,11 +275,41 @@ export class DeleteUserMessagesService {
   }
 
   /**
+   * Record whether this member has a DELETE_EXEMPT_ROLES role, before anything
+   * touches their roles.
+   *
+   * Adding the jail role makes the status-role handler strip every other role
+   * they hold, and the sweep then runs in the background afterwards - so by
+   * the time it asks "is this an OG?", the OG role is already gone and the
+   * answer is no for everyone. It has to be captured up front.
+   *
+   * Idempotent, so whichever of jailUser and deleteUserMessages runs first
+   * decides. Callers that jail before sweeping get the pre-jail answer.
+   */
+  private static async captureDeleteExemption(
+    params: DeleteUserMessagesParams,
+  ) {
+    if (params.hasDeleteExemptRole !== undefined) return;
+
+    const memberId = params.user?.id || params.memberId;
+    const discordMember =
+      params.guild.members.cache.get(memberId) ||
+      (await params.guild.members.fetch(memberId).catch(() => null));
+
+    params.hasDeleteExemptRole = hasDeleteExemptRole(discordMember);
+  }
+
+  /**
    * Delete user messages across all channels, within the requested window.
    */
   static async deleteUserMessages(params: DeleteUserMessagesParams) {
+    await this.captureDeleteExemption(params);
+    const hasExemptRole = params.hasDeleteExemptRole ?? false;
     log(
-      `[DeleteUserMessages] Starting message deletion for user ${params.memberId} in guild ${params.guild.name}`,
+      `[DeleteUserMessages] Starting message deletion for user ${params.memberId} in guild ${params.guild.name}` +
+        (hasExemptRole
+          ? " (exempt role: protected channels will be kept)"
+          : " (no exempt role: only never-delete channels will be kept)"),
     );
     let totalDeleted = 0;
     // Discord will not bulk-delete anything older than 14 days, so clamp
@@ -281,7 +317,17 @@ export class DeleteUserMessagesService {
     const days = Math.min(Math.max(params.days ?? DEFAULT_DELETE_AGE_DAYS, 1), MAX_DELETE_AGE_DAYS);
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
+    let skippedChannels = 0;
+
     const deleteMessages = async (channel: GuildTextBasedChannel) => {
+      if (isDeleteProtected(channel, { hasExemptRole })) {
+        skippedChannels++;
+        log(
+          `[DeleteUserMessages] Skipping protected channel #${channel.name} (${channel.id})`,
+        );
+        return;
+      }
+
       try {
         let deleted = 0;
         let lastMessageId: string | undefined;
@@ -299,9 +345,13 @@ export class DeleteUserMessagesService {
           const oldestMessage = messages.last()!;
           const pastCutoff = oldestMessage.createdTimestamp < cutoff;
 
+          // m.system covers Discord's own notices - join messages, boosts,
+          // pins - which carry the member as their author but are not their
+          // posts. Deleting them only leaves holes in the server's own record.
           const userMessages = messages.filter(
             (m) =>
               m.author.id === params.memberId &&
+              !m.system &&
               m.createdTimestamp >= cutoff,
           );
 
@@ -331,6 +381,17 @@ export class DeleteUserMessagesService {
     };
 
     const processThread = async (thread: ThreadChannel) => {
+      // Checked here as well as in deleteMessages: a thread the member owns is
+      // deleted outright without going through it, and a thread in a protected
+      // forum should survive that too.
+      if (isDeleteProtected(thread, { hasExemptRole })) {
+        skippedChannels++;
+        log(
+          `[DeleteUserMessages] Skipping protected thread #${thread.name} (${thread.id})`,
+        );
+        return;
+      }
+
       try {
         if (thread.ownerId === params.memberId) {
           log(
@@ -393,7 +454,10 @@ export class DeleteUserMessagesService {
     );
     await runWithConcurrency(channelTasks, CHANNEL_CONCURRENCY);
     log(
-      `[DeleteUserMessages] Finished. Deleted ${totalDeleted} messages total for user ${params.memberId}`,
+      `[DeleteUserMessages] Finished. Deleted ${totalDeleted} messages total for user ${params.memberId}` +
+        (skippedChannels
+          ? ` (skipped ${skippedChannels} protected channel${skippedChannels === 1 ? "" : "s"})`
+          : ""),
     );
   }
 

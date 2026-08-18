@@ -49,6 +49,29 @@ export const LOG_EXEMPT_CHANNELS =
     ?.map((s) => s.trim())
     ?.filter(Boolean) ?? [];
 
+// Channels a jail leaves alone for members holding a DELETE_EXEMPT_ROLES role
+// - the categories whose history is worth more than tidying up after one
+// member. Anyone without such a role still has these swept.
+//
+// Like the log exemption this matches a channel's own name OR its category's,
+// so an "Information" category can be protected once. Jailing deletes a
+// member's last fortnight of messages everywhere at once and nothing brings
+// them back, so this list is checked before the sweep starts.
+export const DELETE_EXEMPT_CHANNELS =
+  process.env.DELETE_EXEMPT_CHANNELS?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];
+
+// Channels a jail never sweeps, whoever is being jailed and whatever roles
+// they hold. Meant for channels whose contents are not really the member's
+// posts at all - the welcome channel is Discord's own join notices, which are
+// authored by the joining member and would otherwise be deleted along with
+// everything else.
+export const DELETE_NEVER_CHANNELS =
+  process.env.DELETE_NEVER_CHANNELS?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];
+
 // Forum boards whose posts are checked against a template by the AI. Empty
 // means the feature is off - see the note in thread-create.handler.ts for why
 // it does not default to the known board names.

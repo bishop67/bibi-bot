@@ -1,10 +1,18 @@
 import { botLogger } from "@/lib/telemetry";
 import {
+  DELETE_EXEMPT_CHANNELS,
+  DELETE_NEVER_CHANNELS,
   LOG_EXEMPT_CHANNELS,
   MOD_LOG_CHANNELS,
   REPORT_CHANNELS,
 } from "@/shared/config/channels";
-import { JAIL, STATUS_ROLES, VOICE_ONLY } from "@/shared/config/roles";
+import {
+  DELETE_EXEMPT_ROLES,
+  JAIL,
+  STAFF_ROLES,
+  STATUS_ROLES,
+  VOICE_ONLY,
+} from "@/shared/config/roles";
 import { ChannelType } from "discord.js";
 import type { Client, Guild } from "discord.js";
 
@@ -28,6 +36,34 @@ function findGuildProblems(guild: Guild): string[] {
     }
   }
 
+  // A name that resolves to nothing means no member ever qualifies, so the
+  // exemption protects nobody - silently, and in the case of the delete
+  // exemption, unrecoverably. Worth checking rather than assuming: these are
+  // free-text role names, and this server's happen to contain quotes and
+  // semicolons, which is easy to mistype and impossible to notice.
+  const roleExemptionChecks: [string, string[], string][] = [
+    [
+      "delete exemption",
+      DELETE_EXEMPT_ROLES,
+      "jails will wipe protected channels for everyone",
+    ],
+    [
+      "staff",
+      STAFF_ROLES,
+      "the filters will auto-jail moderators like anyone else",
+    ],
+  ];
+
+  for (const [feature, names, consequence] of roleExemptionChecks) {
+    for (const name of names) {
+      if (!roleNames.has(name)) {
+        problems.push(
+          `no role named "${name}" (${feature}) - nobody qualifies, so ${consequence}`,
+        );
+      }
+    }
+  }
+
   const channelNames = new Set(guild.channels.cache.map((c) => c.name));
   const channelChecks: [string, string[]][] = [
     ["moderation log", MOD_LOG_CHANNELS],
@@ -43,20 +79,32 @@ function findGuildProblems(guild: Guild): string[] {
   }
 
   // Every entry must match something, unlike the candidate lists above. A
-  // misspelled exemption fails in the dangerous direction: the channel keeps
-  // being logged and nothing says so, which is exactly the staff conversation
-  // this is meant to keep out of the log.
+  // misspelled exemption fails in the dangerous direction and silently: the
+  // staff conversation keeps being mirrored into the log, the announcement
+  // channel keeps being swept by the next jail.
   const categoryNames = new Set(
     guild.channels.cache
       .filter((c) => c.type === ChannelType.GuildCategory)
       .map((c) => c.name),
   );
 
-  for (const name of LOG_EXEMPT_CHANNELS) {
-    if (!channelNames.has(name) && !categoryNames.has(name)) {
-      problems.push(
-        `log exemption "${name}" matches no channel or category - that channel is still being logged`,
-      );
+  const exemptionChecks: [string, string[], string][] = [
+    ["log", LOG_EXEMPT_CHANNELS, "that channel is still being logged"],
+    ["delete", DELETE_EXEMPT_CHANNELS, "a jail will still wipe that channel"],
+    [
+      "never-delete",
+      DELETE_NEVER_CHANNELS,
+      "a jail will still wipe that channel",
+    ],
+  ];
+
+  for (const [kind, names, consequence] of exemptionChecks) {
+    for (const name of names) {
+      if (!channelNames.has(name) && !categoryNames.has(name)) {
+        problems.push(
+          `${kind} exemption "${name}" matches no channel or category - ${consequence}`,
+        );
+      }
     }
   }
 

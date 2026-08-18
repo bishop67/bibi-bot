@@ -72,3 +72,15 @@ export const TECH_LEAD =
   // OG role privileges
 export const SPAM_EXEMPT_ROLES =
   process.env.SPAM_EXEMPT_ROLES?.split(",").map((s) => s.trim()) || [];
+
+// Roles that earn a member the DELETE_EXEMPT_CHANNELS protection when they are
+// jailed. A raider holding nothing but the base member role has everything
+// deleted; a long-standing member keeps their history in the channels that
+// matter, because that history is worth more than the tidy-up.
+//
+// Empty means the channel list applies to everyone, so DELETE_EXEMPT_CHANNELS
+// still works on its own.
+export const DELETE_EXEMPT_ROLES =
+  process.env.DELETE_EXEMPT_ROLES?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];

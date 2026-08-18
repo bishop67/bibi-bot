@@ -130,6 +130,12 @@ export interface DeleteUserMessagesParams {
    */
   days?: number;
   /**
+   * Whether DELETE_EXEMPT_CHANNELS applies to this member. Filled in before
+   * the jail role is applied - see captureDeleteExemption for why it cannot be
+   * worked out later.
+   */
+  hasDeleteExemptRole?: boolean;
+  /**
    * Set by the automated filters. A staff member can still be jailed by a
    * moderator running the command by hand - this only exempts them from the
    * bot deciding to do it on its own.

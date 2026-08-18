@@ -1,5 +1,6 @@
 import { LOG_EXEMPT_CHANNELS } from "@/shared/config/channels";
-import type { Channel } from "discord.js";
+import { channelNameChain } from "@/shared/utils/channel.utils";
+import type { Channel, ThreadChannel } from "discord.js";
 
 /**
  * Whether this channel is excluded from logging.
@@ -12,19 +13,12 @@ import type { Channel } from "discord.js";
  * A thread inherits the exemption of the channel it lives in; a private thread
  * in a staff room is exactly the case you would not want leaking.
  */
-export function isLogExempt(channel: Channel | null | undefined): boolean {
+export function isLogExempt(
+  channel: Channel | ThreadChannel | null | undefined,
+): boolean {
   if (!channel || !LOG_EXEMPT_CHANNELS.length) return false;
 
-  const names: string[] = [];
-
-  if ("name" in channel && channel.name) names.push(channel.name);
-
-  // Threads hang off a parent channel, which in turn hangs off a category.
-  if ("parent" in channel && channel.parent) {
-    if (channel.parent.name) names.push(channel.parent.name);
-    const grandparent = "parent" in channel.parent ? channel.parent.parent : null;
-    if (grandparent?.name) names.push(grandparent.name);
-  }
-
-  return names.some((name) => LOG_EXEMPT_CHANNELS.includes(name));
+  return channelNameChain(channel).some((name) =>
+    LOG_EXEMPT_CHANNELS.includes(name),
+  );
 }

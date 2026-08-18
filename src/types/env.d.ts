@@ -17,6 +17,7 @@ interface FeatureBotEnvironment {
 
   // Role System Features
   STAFF_ROLES: string;
+  DELETE_EXEMPT_ROLES: string;
   HELPER_ROLES: string;
   STATUS_ROLES: string;
   MEMBER_ROLES: string;
@@ -29,6 +30,8 @@ interface FeatureBotEnvironment {
   JOIN_EVENT_CHANNELS: string;
   SERVER_LOG_CHANNELS: string;
   LOG_EXEMPT_CHANNELS: string;
+  DELETE_EXEMPT_CHANNELS: string;
+  DELETE_NEVER_CHANNELS: string;
   MEMBERS_COUNT_CHANNELS: string;
   REPORT_CHANNELS: string;
 

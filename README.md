@@ -115,6 +115,35 @@ skip every filter, including the invite filter and message edits.
 role still gets warnings recorded, but the bot will never jail them or delete
 their messages on its own. Moderators can still act on them by hand.
 
+**Jailing protects some channels, and protects more of them for established
+members.** Jailing otherwise deletes the member's last 14 days of messages in
+every channel, and none of it comes back.
+
+| List                      | Applies to                                    |
+| ------------------------- | --------------------------------------------- |
+| `DELETE_NEVER_CHANNELS`   | Everyone. Never swept.                        |
+| `DELETE_EXEMPT_CHANNELS`  | Only members holding a `DELETE_EXEMPT_ROLES` role. |
+
+So a long-standing member keeps their contributions to the channels that
+matter, while a raider holding nothing but the base member role has everything
+removed. Leaving `DELETE_EXEMPT_ROLES` empty applies the exemption to everyone.
+
+Both lists match a channel name **or a category name**, threads inherit their
+parent's protection, and a thread the member owns inside a protected channel is
+kept rather than deleted. Discord's own system messages — join notices, boosts,
+pins — are never deleted anywhere; they carry the member as their author but
+removing them only leaves holes in the server's record.
+
+The role is read **before** the jail is applied, because applying it strips
+every other role the member holds — asking afterwards would find no OG role on
+anyone.
+
+`STAFF_ROLES` does **not** grant this automatically. Staff are already never
+auto-jailed, but a moderator can still jail a colleague by hand, and that path
+is deliberately exempt from the staff guard — so list the staff roles in
+`DELETE_EXEMPT_ROLES` too if you want their history to survive that. The boot
+check reports any name in either list that matches no role.
+
 **Warnings have one source of truth.** `MemberWarning` rows are authoritative;
 `memberGuild.warnings` is a derived counter kept in sync from them.
 
@@ -144,6 +173,9 @@ The ones worth knowing:
 | `STATUS_ROLES`               | Needs a `jail` entry or jailing silently does nothing.    |
 | `STAFF_ROLES`                | No staff exemption from automated punishment.            |
 | `LOG_EXEMPT_CHANNELS`        | Everything is logged, staff channels included.           |
+| `DELETE_EXEMPT_CHANNELS`     | Jailing sweeps every channel, announcements included.    |
+| `DELETE_EXEMPT_ROLES`        | The exemption above applies to everyone, not just OGs.   |
+| `DELETE_NEVER_CHANNELS`      | No channel is protected unconditionally.                 |
 | `BACKGROUND_WORKERS_ENABLED` | Defaults on. `false` stops member data ever updating.    |
 | `TEMPLATE_VALIDATION_BOARDS` | Empty = off. Enables AI template checks on forum boards. |
 | `PRIVILEGED_INTENTS_ENABLED` | Defaults on. `false` runs in limited mode, filters off.  |

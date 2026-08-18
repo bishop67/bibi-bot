@@ -126,7 +126,7 @@ export class MembersService {
   // only user and guild are read, both of which are present either way.
   static async logJoinLeaveEvents(
     discordMember: GuildMember | PartialGuildMember,
-    event: "join" | "leave" | "kick",
+    event: "join" | "leave",
   ) {
     try {
       if (!ConfigValidator.isFeatureEnabled("JOIN_EVENT_CHANNELS")) {
@@ -144,9 +144,10 @@ export class MembersService {
       const userServerName = discordMember?.user.toString();
       const userGlobalName = discordMember?.user.username;
 
+      // Kicks are not here: they are reported by the mod log, which names the
+      // moderator and the reason, so a second notice would double-report.
       const copy = {
         join: { tone: "positive", title: "Joined the server", footer: "join" },
-        kick: { tone: "negative", title: "Kicked from the server", footer: "kick" },
         leave: { tone: "negative", title: "Left the server", footer: "leave" },
       }[event];
 

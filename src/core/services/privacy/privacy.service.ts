@@ -1,3 +1,4 @@
+import { LRUCache } from "lru-cache";
 import { db } from "@/lib/db";
 import {
   memberDeletedMessages,
@@ -15,7 +16,9 @@ const NO_OPT_OUT: OptOutFlags = {
 
 export class PrivacyService {
   // memberId:guildId -> flags. Keeps the message-create hot path off the DB.
-  private static cache = new Map<string, OptOutFlags>();
+  // Bounded: an unbounded Map would keep an entry per member seen, for the
+  // life of the process. Eviction is harmless - a miss just re-reads the row.
+  private static cache = new LRUCache<string, OptOutFlags>({ max: 5000 });
 
   private static key(memberId: string, guildId: string) {
     return `${memberId}:${guildId}`;

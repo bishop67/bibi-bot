@@ -97,12 +97,19 @@ bot.once("clientReady", async () => {
       // Every member row points at this one, so it has to land first.
       await MembersService.upsertDbGuild(guild);
 
+      // The loser of the race still holds its timer, so it has to be cleared -
+      // otherwise every guild leaves a 60s timer behind on every boot.
+      let backfillTimer: NodeJS.Timeout | undefined;
+
       const members = await Promise.race([
         guild.members.fetch(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("member fetch timed out")), BACKFILL_TIMEOUT_MS),
-        ),
-      ]);
+        new Promise<never>((_, reject) => {
+          backfillTimer = setTimeout(
+            () => reject(new Error("member fetch timed out")),
+            BACKFILL_TIMEOUT_MS,
+          );
+        }),
+      ]).finally(() => clearTimeout(backfillTimer));
 
       for (const member of members.values()) {
         if (member.user.bot) continue;

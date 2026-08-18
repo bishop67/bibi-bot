@@ -38,8 +38,8 @@ export class Jail {
     })
     reason: string | undefined,
     @SlashOption({
-      name: "delete-messages",
-      description: "Delete their recent messages (default: true)",
+      name: "purge",
+      description: "Also delete their recent messages (default: true)",
       type: ApplicationCommandOptionType.Boolean,
       required: false,
     })

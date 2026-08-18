@@ -1,6 +1,11 @@
 import { botLogger } from "@/lib/telemetry";
-import { MOD_LOG_CHANNELS, REPORT_CHANNELS } from "@/shared/config/channels";
+import {
+  LOG_EXEMPT_CHANNELS,
+  MOD_LOG_CHANNELS,
+  REPORT_CHANNELS,
+} from "@/shared/config/channels";
 import { JAIL, STATUS_ROLES, VOICE_ONLY } from "@/shared/config/roles";
+import { ChannelType } from "discord.js";
 import type { Client, Guild } from "discord.js";
 
 /**
@@ -34,6 +39,24 @@ function findGuildProblems(guild: Guild): string[] {
   for (const [feature, names] of channelChecks) {
     if (names.length && !names.some((name) => channelNames.has(name))) {
       problems.push(`${feature} disabled: none of [${names.join(", ")}] exist`);
+    }
+  }
+
+  // Every entry must match something, unlike the candidate lists above. A
+  // misspelled exemption fails in the dangerous direction: the channel keeps
+  // being logged and nothing says so, which is exactly the staff conversation
+  // this is meant to keep out of the log.
+  const categoryNames = new Set(
+    guild.channels.cache
+      .filter((c) => c.type === ChannelType.GuildCategory)
+      .map((c) => c.name),
+  );
+
+  for (const name of LOG_EXEMPT_CHANNELS) {
+    if (!channelNames.has(name) && !categoryNames.has(name)) {
+      problems.push(
+        `log exemption "${name}" matches no channel or category - that channel is still being logged`,
+      );
     }
   }
 

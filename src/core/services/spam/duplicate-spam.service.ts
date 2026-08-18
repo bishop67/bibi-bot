@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { Attachment, Message } from "discord.js";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { isSpamExempt } from "@/core/services/spam/spam-exempt";
+import { isStaffMember } from "@/shared/config/staff";
 import {
   CHANNEL_JAIL_THRESHOLD,
   CHANNEL_SPAM_WINDOW_MS,
@@ -97,7 +98,8 @@ export class DuplicateSpamService {
   ): Promise<boolean> {
     if (!message.guild) return false;
 
-    await message.delete().catch(() => {});
+    // Warned, but a staff member's message is never removed for them.
+    if (!isStaffMember(message.member)) await message.delete().catch(() => {});
 
     if (shouldJail) {
       const reason = `Sent ${count} duplicate messages`;
@@ -141,7 +143,8 @@ export class DuplicateSpamService {
   ): Promise<boolean> {
     if (!message.guild) return false;
 
-    await message.delete().catch(() => {});
+    // Warned, but a staff member's message is never removed for them.
+    if (!isStaffMember(message.member)) await message.delete().catch(() => {});
 
     if (shouldJail) {
       const reason = `Posted in ${uniqueChannels} channels within 10 minutes`;

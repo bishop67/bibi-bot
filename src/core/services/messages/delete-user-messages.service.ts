@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
-import { JAIL, STAFF_ROLES } from "@/shared/config/roles";
+import { JAIL } from "@/shared/config/roles";
+import { isStaffMember } from "@/shared/config/staff";
 import { TEMPLATE_VALIDATION_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
 import type { DeleteUserMessagesParams } from "@/types";
@@ -22,7 +23,7 @@ import {
 import { error, log } from "node:console";
 
 const CHANNEL_CONCURRENCY = 3;
-const DEFAULT_DELETE_AGE_DAYS = 7;
+const DEFAULT_DELETE_AGE_DAYS = 14;
 // Discord's bulk delete refuses messages older than this.
 const MAX_DELETE_AGE_DAYS = 14;
 
@@ -78,8 +79,6 @@ export class DeleteUserMessagesService {
   private static async isAutoJailExempt(
     params: DeleteUserMessagesParams,
   ): Promise<boolean> {
-    if (!STAFF_ROLES.length) return false;
-
     const memberId = params.user?.id || params.memberId;
     const discordMember =
       params.guild.members.cache.get(memberId) ||
@@ -87,16 +86,11 @@ export class DeleteUserMessagesService {
 
     if (!discordMember) return false;
 
-    const staffRole = discordMember.roles.cache.find((role) =>
-      STAFF_ROLES.includes(role.name),
-    );
-
-    if (!staffRole) return false;
+    if (!isStaffMember(discordMember)) return false;
 
     botLogger.info("Skipped auto-jail for staff member", {
       guildId: params.guild.id,
       memberId,
-      staffRole: staffRole.name,
       reason: params.reason,
     });
 

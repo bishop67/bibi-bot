@@ -52,7 +52,7 @@ export class DeleteUserMessages {
     deleteMessages: boolean = true,
     @SlashOption({
       name: "days",
-      description: "How many days back to delete (default 7, max 14)",
+      description: "How many days back to delete (default 14, max 14)",
       type: ApplicationCommandOptionType.Integer,
       minValue: 1,
       maxValue: 14,

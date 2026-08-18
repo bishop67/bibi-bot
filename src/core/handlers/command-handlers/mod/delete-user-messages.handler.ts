@@ -47,7 +47,7 @@ export async function executeDeleteUserMessages(
 
   DeleteUserMessagesService.deleteUserMessages(params).catch(() => {});
 
-  const window = `last ${days ?? 7} day${(days ?? 7) === 1 ? "" : "s"}`;
+  const window = `last ${days ?? 14} day${(days ?? 14) === 1 ? "" : "s"}`;
 
   return {
     success: true,

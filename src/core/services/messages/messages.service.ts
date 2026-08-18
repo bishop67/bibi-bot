@@ -2,6 +2,7 @@ import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { PrivacyService } from "@/core/services/privacy/privacy.service";
+import { isStaffMember } from "@/shared/config/staff";
 import { db } from "@/lib/db";
 import { memberMessages, memberDeletedMessages, memberGuild } from "@/lib/db-schema";
 import { and, count, eq } from "drizzle-orm";
@@ -393,7 +394,8 @@ export class MessagesService {
 
     if (!hasExternalInvite) return false;
 
-    await message.delete().catch(() => {});
+    // Staff are warned but never have a message removed for them.
+    if (!isStaffMember(member)) await message.delete().catch(() => {});
 
     // Record the automod warning through WarningsService rather than bumping
     // memberGuild.warnings directly. That column is derived from the

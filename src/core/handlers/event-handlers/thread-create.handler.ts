@@ -7,7 +7,8 @@ import { AiTemplateService } from "@/core/services/ai/ai-template.service";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { getThreadTypeFromChannel } from "@/shared/config/thread-types";
 import { botLogger } from "@/lib/telemetry";
-import type { ValidatedBoardType } from "@/shared/ai/prompts";
+import { BOARD_TEMPLATES, type ValidatedBoardType } from "@/shared/ai/prompts";
+import { TEMPLATE_VALIDATION_BOARDS } from "@/shared/config/channels";
 import type { TemplateValidationResult } from "@/types";
 import { getThreadWelcomeMessage } from "@/shared/config/branding";
 import { TEMPLATE_VALIDATION_CHANNELS } from "@/shared/config/channels";
@@ -15,7 +16,15 @@ import { ConfigValidator } from "@/shared/config/validator";
 import type { AnyThreadChannel } from "discord.js";
 import { ChannelType, TextChannel, ThreadChannel } from "discord.js";
 
-const VALIDATED_BOARDS: ValidatedBoardType[] = ["job-board", "dev-board", "showcase"];
+// Opt-in, and empty by default.
+//
+// The board type is derived from the trailing word of a forum channel's name,
+// so a channel casually named "showcase" would otherwise start AI-gating posts,
+// deleting them and jailing after three strikes - without anybody switching
+// anything on. A feature that removes posts should not arrive by accident.
+const VALIDATED_BOARDS = TEMPLATE_VALIDATION_BOARDS.filter(
+  (board): board is ValidatedBoardType => board in BOARD_TEMPLATES,
+);
 
 // In-memory counter for post removal strikes per user
 // Key: `${guildId}:${userId}`, Value: removal count

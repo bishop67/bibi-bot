@@ -42,6 +42,7 @@ interface FeatureBotEnvironment {
 
   // Template Validation
   TEMPLATE_VALIDATION_CHANNELS: string;
+  TEMPLATE_VALIDATION_BOARDS: string;
 
   // Admin API
   ADMIN_API_KEY: string;

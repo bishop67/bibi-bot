@@ -48,3 +48,12 @@ export const LOG_EXEMPT_CHANNELS =
   process.env.LOG_EXEMPT_CHANNELS?.split(",")
     ?.map((s) => s.trim())
     ?.filter(Boolean) ?? [];
+
+// Forum boards whose posts are checked against a template by the AI. Empty
+// means the feature is off - see the note in thread-create.handler.ts for why
+// it does not default to the known board names.
+// Valid values: job-board, dev-board, showcase
+export const TEMPLATE_VALIDATION_BOARDS =
+  process.env.TEMPLATE_VALIDATION_BOARDS?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];

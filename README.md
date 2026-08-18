@@ -124,6 +124,12 @@ returns, so a single message cannot be punished twice or banked as XP.
 **Exemptions are one concept.** `SPAM_EXEMPT_CHANNELS` and `SPAM_EXEMPT_ROLES`
 skip every filter, including the invite filter and message edits.
 
+**Jailing follows Discord's own hierarchy.** `/jail` refuses a target whose
+highest role is equal to or above the moderator's, so a moderator cannot jail
+an administrator, a peer, or themselves — the server owner is exempt. It also
+refuses anyone the bot cannot manage, because a jail that cannot strip their
+roles leaves them holding both the jail role and everything else.
+
 **Staff are warned but never auto-punished.** Anyone holding a `STAFF_ROLES`
 role still gets warnings recorded, but the bot will never jail them or delete
 their messages on its own. Moderators can still act on them by hand.

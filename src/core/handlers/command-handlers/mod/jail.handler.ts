@@ -1,6 +1,49 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import type { CommandResult } from "@/types";
-import type { CommandInteraction, User } from "discord.js";
+import type { CommandInteraction, Guild, User } from "discord.js";
+
+/**
+ * Whether this moderator outranks the member they are trying to jail.
+ *
+ * Manage Roles is a single permission, so without this any moderator can jail
+ * any other - or an administrator, or themselves. Discord gates its own role
+ * actions on the acting member's highest role sitting above the target's, and
+ * moderation should read the same way rather than inventing a second rule.
+ *
+ * Returns the refusal to show, or null when the jail may proceed.
+ */
+async function refuseByRank(
+  guild: Guild,
+  invokerId: string,
+  targetId: string,
+): Promise<string | null> {
+  if (invokerId === targetId) return "You cannot jail yourself.";
+
+  const target = await guild.members.fetch(targetId).catch(() => null);
+
+  // Not in the server: there are no roles to weigh, and the jail is only a
+  // database record until they return.
+  if (!target) return null;
+
+  // The bot's own position is a separate limit from the moderator's. Ignoring
+  // it half-jails the member - they gain the jail role while keeping every
+  // role the bot could not strip - which is worse than refusing outright.
+  if (!target.manageable) {
+    return "I cannot jail that member - their highest role sits above mine, so I cannot remove their roles.";
+  }
+
+  // The owner outranks everyone, including anyone whose roles say otherwise.
+  if (invokerId === guild.ownerId) return null;
+
+  const invoker = await guild.members.fetch(invokerId).catch(() => null);
+  if (!invoker) return "I could not check your roles, so I have not jailed anyone.";
+
+  if (target.roles.highest.position >= invoker.roles.highest.position) {
+    return "You cannot jail someone whose highest role is equal to or above your own.";
+  }
+
+  return null;
+}
 
 export async function executeJail(
   interaction: CommandInteraction,
@@ -15,6 +58,13 @@ export async function executeJail(
     return { success: false, error: "Invalid user or guild" };
   }
 
+  const refusal = await refuseByRank(
+    interaction.guild,
+    interaction.user.id,
+    memberId,
+  );
+  if (refusal) return { success: false, error: refusal };
+
   const params = {
     guild: interaction.guild,
     memberId,
@@ -28,7 +78,8 @@ export async function executeJail(
   };
 
   // Deliberately not marked `automated`, so a moderator can still jail a
-  // staff member by hand even though the filters never will.
+  // staff member by hand even though the filters never will - subject to
+  // outranking them, which refuseByRank has already established.
   const { alreadyJailed } = await DeleteUserMessagesService.jailUser(params);
 
   // Refused rather than repeated: a second jail cannot punish them further,

@@ -70,15 +70,16 @@ export class PrivacyService {
     guildId: string,
     optOut: boolean,
   ): Promise<void> {
+    // Upsert rather than update: a plain UPDATE matches nothing for a member
+    // with no MemberGuild row yet, and the command would still answer "opted
+    // out" while having changed nothing at all.
     await db
-      .update(memberGuild)
-      .set({ messageOptOut: optOut })
-      .where(
-        and(
-          eq(memberGuild.memberId, memberId),
-          eq(memberGuild.guildId, guildId),
-        ),
-      );
+      .insert(memberGuild)
+      .values({ memberId, guildId, status: true, messageOptOut: optOut })
+      .onConflictDoUpdate({
+        target: [memberGuild.memberId, memberGuild.guildId],
+        set: { messageOptOut: optOut },
+      });
     this.invalidate(memberId, guildId);
     if (optOut) await this.purgeMessageData(memberId, guildId);
   }
@@ -88,15 +89,16 @@ export class PrivacyService {
     guildId: string,
     optOut: boolean,
   ): Promise<void> {
+    // Upsert rather than update: a plain UPDATE matches nothing for a member
+    // with no MemberGuild row yet, and the command would still answer "opted
+    // out" while having changed nothing at all.
     await db
-      .update(memberGuild)
-      .set({ presenceOptOut: optOut })
-      .where(
-        and(
-          eq(memberGuild.memberId, memberId),
-          eq(memberGuild.guildId, guildId),
-        ),
-      );
+      .insert(memberGuild)
+      .values({ memberId, guildId, status: true, presenceOptOut: optOut })
+      .onConflictDoUpdate({
+        target: [memberGuild.memberId, memberGuild.guildId],
+        set: { presenceOptOut: optOut },
+      });
     this.invalidate(memberId, guildId);
     if (optOut) await this.purgePresenceData(memberId, guildId);
   }

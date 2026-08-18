@@ -9,7 +9,9 @@ import {
   User,
   type CommandInteraction,
 } from "discord.js";
-import { Discord, Slash, SlashGroup, SlashOption } from "discordx";
+import { Discord, Slash, SlashChoice, SlashOption } from "discordx";
+
+type StatsType = "me" | "user" | "top" | "members";
 
 /** Command history is best-effort and must never delay the reply. */
 function record(interaction: CommandInteraction, command: string) {
@@ -26,86 +28,86 @@ function record(interaction: CommandInteraction, command: string) {
 }
 
 @Discord()
-@SlashGroup({
-  name: "stats",
-  description: "Server and member statistics",
-  dmPermission: false,
-})
-@SlashGroup("stats")
 export class StatsCommands {
-  @Slash({ name: "me", description: "Get your stats" })
-  async me(interaction: CommandInteraction) {
-    if (!(await safeDeferReply(interaction))) return;
-    record(interaction, "stats me");
-
-    const result = await executeUserStatsCommand(interaction);
-    if ("error" in result) return safeEditReply(interaction, result.error);
-
-    return safeEditReply(interaction, {
-      embeds: [result.embed],
-      allowedMentions: { users: [], roles: [] },
-    });
-  }
-
-  @Slash({ name: "user", description: "Get stats for a specific member" })
-  async user(
+  /**
+   * One command with a `type` choice rather than four subcommands.
+   *
+   * Discord lists every subcommand as its own row in the picker, so a group
+   * reads as four separate commands however it is declared. The cost of
+   * collapsing them is that `user` and `lookback` cannot be attached to the
+   * one choice they belong to - Discord has no way to vary options per choice
+   * - so they are offered always and checked here instead.
+   */
+  @Slash({
+    name: "stats",
+    description: "Server and member statistics",
+    dmPermission: false,
+  })
+  async stats(
+    @SlashChoice({ name: "me - your own stats", value: "me" })
+    @SlashChoice({ name: "member - stats for someone else", value: "user" })
+    @SlashChoice({ name: "top - guild leaderboard", value: "top" })
+    @SlashChoice({ name: "members - member flow and count", value: "members" })
+    @SlashOption({
+      name: "type",
+      description: "Which statistics to show",
+      required: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    type: StatsType,
     @SlashOption({
       name: "user",
-      description: "Select user which stats should be shown",
-      required: true,
+      description: "Whose stats to show (only used with type: member)",
+      required: false,
       type: ApplicationCommandOptionType.User,
     })
-    user: User,
-    interaction: CommandInteraction,
-  ) {
-    if (!(await safeDeferReply(interaction))) return;
-    record(interaction, "stats user");
-
-    const result = await executeUserStatsCommand(interaction, user.id);
-    if ("error" in result) return safeEditReply(interaction, result.error);
-
-    return safeEditReply(interaction, {
-      embeds: [result.embed],
-      allowedMentions: { users: [], roles: [] },
-    });
-  }
-
-  @Slash({ name: "top", description: "Get top stats for the guild" })
-  async top(
+    user: User | undefined,
     @SlashOption({
       name: "lookback",
-      description: "Lookback days",
+      description: "Days to look back (only used with type: top)",
       required: false,
       minValue: 1,
       maxValue: 9999,
       type: ApplicationCommandOptionType.Integer,
     })
-    lookback: number = 9999,
+    lookback: number | undefined,
     interaction: CommandInteraction,
   ) {
     if (!(await safeDeferReply(interaction))) return;
-    record(interaction, "stats top");
+    record(interaction, `stats ${type}`);
 
-    const result = await executeTopCommand(interaction, lookback);
+    // Discord cannot stop someone pairing an option with the wrong choice, so
+    // say which pairing was expected rather than quietly ignoring it.
+    if (type === "user" && !user) {
+      return safeEditReply(
+        interaction,
+        "Pick someone with the `user` option, or choose type: me for your own stats.",
+      );
+    }
+
+    if (type === "members") {
+      const result = await executeMembersCommand(interaction);
+      if ("error" in result) return safeEditReply(interaction, result.error);
+
+      return safeEditReply(interaction, {
+        embeds: [result.embed],
+        files: [result.attachment],
+        allowedMentions: { users: [], roles: [] },
+      });
+    }
+
+    const result =
+      type === "top"
+        ? await executeTopCommand(interaction, lookback ?? 9999)
+        : await executeUserStatsCommand(
+            interaction,
+            type === "user" ? user!.id : undefined,
+          );
+
     if ("error" in result) return safeEditReply(interaction, result.error);
 
     return safeEditReply(interaction, {
       embeds: [result.embed],
-      allowedMentions: { users: [], roles: [] },
-    });
-  }
-
-  @Slash({ name: "members", description: "Memberflow and count of the past" })
-  async members(interaction: CommandInteraction) {
-    if (!(await safeDeferReply(interaction))) return;
-    record(interaction, "stats members");
-
-    const result = await executeMembersCommand(interaction);
-    if ("error" in result) return safeEditReply(interaction, result.error);
-
-    return safeEditReply(interaction, {
-      embeds: [result.embed],
-      files: [result.attachment],
       allowedMentions: { users: [], roles: [] },
     });
   }

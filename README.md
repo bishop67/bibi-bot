@@ -57,15 +57,15 @@ response would never notice.
 
 | Command          | Description                                            | Options                   |
 | ---------------- | ------------------------------------------------------ | ------------------------- |
-| `/stats me`      | Your stats                                             |                           |
-| `/stats user`    | Stats for a specific member                            | `user`                    |
-| `/stats top`     | Top stats for the guild                                | `lookback` (optional)     |
-| `/stats members` | Member flow and count                                  |                           |
+| `/stats`         | Server and member statistics                           | `type`, `user`, `lookback` |
 | `/warnings`      | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional) |
 | `/report`        | Report a member to the moderators                      | `user`, `reason`          |
 | `/time`          | Current time around the world, or one place            | `location` (optional)     |
 | `/lookback-me`   | Change your own lookback range                         | `lookback`                |
-| `/status`        | Bot CPU and memory                                     |                           |
+
+`/stats` takes a `type` of `me`, `member`, `top` or `members`. `user` applies
+only to `member` and `lookback` only to `top` — Discord cannot tie an option to
+one choice, so both are always offered and validated when the command runs.
 
 ### Moderator (Manage Roles)
 
@@ -79,6 +79,7 @@ response would never notice.
 | `/unjail`          | Release a member from jail                       | `user`, `user-id`, `reason`                  |
 | `/delete-messages` | Bulk-delete from a channel                       | `amount`                                     |
 | `/logs commands`   | Command history                                  | `count` (optional)                           |
+| `/status`          | Bot CPU and memory                               |                                              |
 | `!verify-users`    | Full member resync (prefix command)              |                                              |
 
 ### Administrator

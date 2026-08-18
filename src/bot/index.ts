@@ -27,8 +27,7 @@ import "./commands/mod/jail";
 import "./commands/mod/unjail";
 import "./commands/mod/delete-warning";
 import "./commands/mod/edit-warning";
-import "./commands/mod/log-command-history";
-import "./commands/mod/log-deleted-messages-history";
+import "./commands/mod/logs";
 import "./commands/mod/lookback-members";
 import "./commands/mod/status";
 import "./commands/mod/top-warnings";
@@ -38,10 +37,7 @@ import "./commands/mod/warnings";
 
 // Commands - User
 import "./commands/user/lookback-me";
-import "./commands/user/me";
-import "./commands/user/members";
 import "./commands/user/privacy";
+import "./commands/user/stats";
 import "./commands/user/report";
-import "./commands/user/top";
-import "./commands/user/user";
 import "./commands/user/time";

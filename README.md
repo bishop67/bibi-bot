@@ -110,9 +110,10 @@ can see and storing each message's real send time so lookback windows and the
 member-flow chart stay accurate. It stores metadata only, never content. Bot
 messages and empty messages are skipped.
 
-Progress is saved per channel, so a run that is interrupted — or rate-limited
-into taking longer than you want to wait — resumes where it stopped when you
-run it again. Pass `--reset` to start from the beginning instead.
+Progress is saved every few hundred messages, including a cursor into the
+channel being read, so a run interrupted by a restart resumes from roughly
+where it stopped rather than starting that channel again. Pass `--reset` to
+start from the beginning instead.
 
 ## Moderation behaviour
 

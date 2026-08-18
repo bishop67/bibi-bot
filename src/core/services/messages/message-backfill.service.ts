@@ -49,7 +49,7 @@ export class MessageBackfillService {
     guild: Guild,
     onProgress?: (progress: BackfillProgress) => void,
   ): Promise<{ inserted: number; channelsDone: number; skipped: string[] }> {
-    const done = new Set(await this.loadProgress(guild.id));
+    const { done, cursors } = await this.loadProgress(guild.id);
     const channels = await this.collectChannels(guild);
     const skipped: string[] = [];
     let inserted = 0;
@@ -63,7 +63,7 @@ export class MessageBackfillService {
       if (!this.canRead(channel, guild)) {
         skipped.push(channel.name);
         done.add(channel.id);
-        await this.saveProgress(guild.id, done);
+        await this.saveProgress(guild.id, done, cursors);
         continue;
       }
 
@@ -78,13 +78,25 @@ export class MessageBackfillService {
       });
 
       try {
-        inserted += await this.backfillChannel(channel, guild.id, (soFar) =>
-          onProgress?.({
-            channelsDone,
-            channelsTotal: channels.length,
-            inserted: inserted + soFar,
-            channelName: channel.name,
-          }),
+        inserted += await this.backfillChannel(
+          channel,
+          guild.id,
+          cursors.get(channel.id),
+          (soFar, cursor) => {
+            onProgress?.({
+              channelsDone,
+              channelsTotal: channels.length,
+              inserted: inserted + soFar,
+              channelName: channel.name,
+            });
+
+            // Written every batch, not every page: the cost of a restart is
+            // then a few hundred re-fetched messages instead of a channel of
+            // twenty thousand starting over, which is what made the first two
+            // attempts get nowhere.
+            cursors.set(channel.id, cursor);
+            return this.saveProgress(guild.id, done, cursors);
+          },
         );
       } catch (err) {
         // A channel that cannot be read is not a reason to abandon the rest,
@@ -101,7 +113,8 @@ export class MessageBackfillService {
       }
 
       done.add(channel.id);
-      await this.saveProgress(guild.id, done);
+      cursors.delete(channel.id);
+      await this.saveProgress(guild.id, done, cursors);
     }
 
     return { inserted, channelsDone, skipped };
@@ -119,7 +132,18 @@ export class MessageBackfillService {
       );
   }
 
-  private static async loadProgress(guildId: string): Promise<string[]> {
+  /**
+   * Recorded progress, in one text array because that is the column
+   * SyncProgress already has.
+   *
+   * A bare id means the channel is finished. `id:messageId` means it was
+   * interrupted partway and paging should resume from that message rather
+   * than from the newest one again.
+   */
+  private static async loadProgress(guildId: string): Promise<{
+    done: Set<string>;
+    cursors: Map<string, string>;
+  }> {
     const row = await db.query.syncProgress.findFirst({
       where: and(
         eq(syncProgress.guildId, guildId),
@@ -127,33 +151,39 @@ export class MessageBackfillService {
       ),
     });
 
-    return (row?.processedIds ?? []).filter((id) => id !== PLACEHOLDER_ID);
+    const done = new Set<string>();
+    const cursors = new Map<string, string>();
+
+    for (const entry of row?.processedIds ?? []) {
+      if (entry === PLACEHOLDER_ID) continue;
+
+      const [channelId, cursor] = entry.split(":");
+      if (cursor) cursors.set(channelId, cursor);
+      else done.add(channelId);
+    }
+
+    return { done, cursors };
   }
 
-  private static async saveProgress(guildId: string, done: Set<string>) {
+  private static async saveProgress(
+    guildId: string,
+    done: Set<string>,
+    cursors: Map<string, string>,
+  ) {
+    const processedIds = [
+      ...done,
+      ...[...cursors].map(([channelId, cursor]) => `${channelId}:${cursor}`),
+    ];
+
     await db
       .insert(syncProgress)
-      .values({
-        guildId,
-        type: SYNC_TYPE,
-        processedIds: [...done],
-        failedIds: [],
-      })
+      .values({ guildId, type: SYNC_TYPE, processedIds, failedIds: [] })
       .onConflictDoUpdate({
         target: [syncProgress.guildId, syncProgress.type],
-        set: { processedIds: [...done], updatedAt: new Date().toISOString() },
+        set: { processedIds, updatedAt: new Date().toISOString() },
       });
   }
 
-  /**
-   * Every channel in the guild that can hold messages, threads included.
-   *
-   * Deliberately not `channels.cache` alone. Threads are only cached while
-   * something has reason to keep them, and archived ones never are - on a
-   * forum-heavy server that silently skips most of what people wrote, which
-   * is the opposite of a backfill's job. Active threads come guild-wide in
-   * one call; archived ones have to be asked for per parent.
-   */
   private static async collectChannels(
     guild: Guild,
   ): Promise<GuildTextBasedChannel[]> {
@@ -229,9 +259,10 @@ export class MessageBackfillService {
   private static async backfillChannel(
     channel: GuildTextBasedChannel,
     guildId: string,
-    onPage?: (insertedSoFar: number) => void,
+    resumeFrom?: string,
+    onBatch?: (insertedSoFar: number, cursor: string) => void | Promise<void>,
   ): Promise<number> {
-    let before: string | undefined;
+    let before: string | undefined = resumeFrom;
     let inserted = 0;
     let batch: {
       id: string;
@@ -295,8 +326,11 @@ export class MessageBackfillService {
         });
       }
 
-      if (batch.length >= INSERT_BATCH) await flush();
-      onPage?.(inserted + batch.length);
+      if (batch.length >= INSERT_BATCH) {
+        await flush();
+        await onBatch?.(inserted, before);
+      }
+
       if (page.size < PAGE_SIZE) break;
     }
 

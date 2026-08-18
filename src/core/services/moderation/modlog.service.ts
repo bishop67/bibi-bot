@@ -1,7 +1,7 @@
 import { ensureMemberRows } from "@/core/services/members/ensure-member";
 import { db } from "@/lib/db";
 import { member, modLog } from "@/lib/db-schema";
-import { BOT_ICON, RED_COLOR } from "@/shared/config/branding";
+import { logEmbed, type LogTone } from "@/core/embeds/log.embed";
 import { MOD_LOG_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
 import { eq } from "drizzle-orm";
@@ -19,6 +19,21 @@ export type ModLogAction =
   | "unban"
   | "timeout"
   | "untimeout";
+
+// Severity, so a ban and an unban are not the same colour in the scrollback.
+const ACTION_TONES: Record<ModLogAction, LogTone> = {
+  warn: "caution",
+  "edit-warning": "neutral",
+  "delete-warning": "neutral",
+  "clear-warnings": "neutral",
+  jail: "negative",
+  unjail: "positive",
+  kick: "negative",
+  ban: "negative",
+  unban: "positive",
+  timeout: "caution",
+  untimeout: "positive",
+};
 
 const ACTION_TITLES: Record<ModLogAction, string> = {
   warn: "Member Warned",
@@ -104,22 +119,22 @@ export class ModLogService {
         const logChannel = this.findLogChannel(guild);
 
         if (logChannel?.isTextBased()) {
-          const embed: APIEmbed = {
-            color: RED_COLOR,
+          const embed: APIEmbed = logEmbed({
+            tone: ACTION_TONES[action],
+            user: guild.members.cache.get(targetId)?.user ?? null,
             title: ACTION_TITLES[action],
-            description: [
-              `**Member:** <@${targetId}> (${resolvedTargetName})`,
-              `**Member ID:** ${targetId}`,
+            lines: [
+              `<@${targetId}> (${resolvedTargetName})`,
               `**Moderator:** ${
                 moderatorId
                   ? `<@${moderatorId}> (${moderatorName ?? "unknown"})`
                   : "Automod"
               }`,
               `**Reason:** ${reason || "No reason provided"}`,
-            ].join("\n"),
-            timestamp: new Date().toISOString(),
-            footer: { text: "Mod Log", icon_url: BOT_ICON },
-          };
+              `-# ${targetId}`,
+            ],
+            footer: "mod log",
+          });
 
           try {
             const sent = await (logChannel as TextChannel).send({

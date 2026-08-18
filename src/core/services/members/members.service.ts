@@ -1,3 +1,4 @@
+import { logEmbed } from "@/core/embeds/log.embed";
 import { simpleEmbedExample } from "@/core/embeds/simple.embed";
 import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { db } from "@/lib/db";
@@ -143,19 +144,19 @@ export class MembersService {
       const userServerName = discordMember?.user.toString();
       const userGlobalName = discordMember?.user.username;
 
-      // copy paste embed so it doesnt get overwritten
-      const joinEmbed = simpleEmbedExample();
+      const copy = {
+        join: { tone: "positive", title: "Joined the server", footer: "join" },
+        kick: { tone: "negative", title: "Kicked from the server", footer: "kick" },
+        leave: { tone: "negative", title: "Left the server", footer: "leave" },
+      }[event];
 
-      if (event === "join") {
-        joinEmbed.description = `${userServerName} (${userGlobalName}) joined the server ✅`;
-        joinEmbed.footer!.text = "join";
-      } else if (event === "kick") {
-        joinEmbed.description = `${userServerName} (${userGlobalName}) was kicked 👢`;
-        joinEmbed.footer!.text = "kick";
-      } else {
-        joinEmbed.description = `${userServerName} (${userGlobalName}) left the server 🚪`;
-        joinEmbed.footer!.text = "leave";
-      }
+      const joinEmbed = logEmbed({
+        tone: copy.tone as "positive" | "negative",
+        user: discordMember.user,
+        title: copy.title,
+        lines: [`${userServerName} (${userGlobalName})`],
+        footer: copy.footer,
+      });
 
       // send embed event to voice channel
       (joinEventsChannel as TextChannel).send({
@@ -396,8 +397,7 @@ export class MembersService {
     if (oldMember.nickname !== newMember.nickname) {
       await ServerLogService.logNicknameChange(
         newMember.guild,
-        newMember.id,
-        newMember.user.username,
+        newMember.user,
         oldMember.nickname ?? null,
         newMember.nickname ?? null,
       );

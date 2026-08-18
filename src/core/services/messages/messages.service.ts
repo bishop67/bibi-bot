@@ -125,8 +125,8 @@ export class MessagesService {
       await ServerLogService.logMessageDelete(
         message,
         content,
+        message.member?.user ?? null,
         messageMemberId,
-        message.member?.user?.username ?? "Unknown User",
         deletedByMemberId,
       );
     } catch (_) {}

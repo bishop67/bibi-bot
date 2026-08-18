@@ -7,7 +7,7 @@ import { guildVoiceEvents, memberGuild } from "@/lib/db-schema";
 import type { GuildVoiceEvents } from "@/lib/db-schema";
 import { ConfigValidator } from "@/shared/config/validator";
 import { VOICE_EVENT_CHANNELS } from "@/shared/config/channels";
-import { simpleEmbedExample } from "@/core/embeds/simple.embed";
+import { logEmbed } from "@/core/embeds/log.embed";
 import { getDaysArray } from "@/shared/utils/date.utils";
 
 dayjs.extend(utc);
@@ -75,16 +75,24 @@ export class VoiceService {
       const oldChannel = oldVoiceState.channel?.name;
       const newChannel = newVoiceState.channel?.name;
 
-      // copy paste embed so it doesnt get overwritten
-      const voiceEmbed = simpleEmbedExample();
+      // Previously this set only the description, leaving simpleEmbedExample's
+      // placeholder "*" showing as the footer of every voice event.
+      const voice = !oldChannel
+        ? { title: `Joined voice · ${newChannel}`, footer: "voice join" }
+        : !newChannel
+          ? { title: `Left voice · ${oldChannel}`, footer: "voice leave" }
+          : {
+              title: `Moved voice · ${oldChannel} → ${newChannel}`,
+              footer: "voice move",
+            };
 
-      if (!oldChannel) {
-        voiceEmbed.description = `${userServerName} (${userGlobalName}) joined ${newChannel}`;
-      } else if (!newChannel) {
-        voiceEmbed.description = `${userServerName} (${userGlobalName}) left ${oldChannel}`;
-      } else {
-        voiceEmbed.description = `${userServerName} (${userGlobalName}) moved from ${oldChannel} to ${newChannel}`;
-      }
+      const voiceEmbed = logEmbed({
+        tone: "neutral",
+        user: newVoiceState.member?.user ?? null,
+        title: voice.title,
+        lines: [`${userServerName} (${userGlobalName})`],
+        footer: voice.footer,
+      });
 
       // send embed event to voice channel
       (voiceEventsChannel as TextChannel).send({

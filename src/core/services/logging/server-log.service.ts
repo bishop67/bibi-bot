@@ -1,6 +1,13 @@
-import { simpleEmbedExample } from "@/core/embeds/simple.embed";
+import { logEmbed } from "@/core/embeds/log.embed";
 import { SERVER_LOG_CHANNELS } from "@/shared/config/channels";
-import type { APIEmbed, Guild, Message, PartialMessage, TextChannel } from "discord.js";
+import type {
+  APIEmbed,
+  Guild,
+  Message,
+  PartialMessage,
+  TextChannel,
+  User,
+} from "discord.js";
 
 /** Discord rejects embed descriptions past 4096; leave room for the labels. */
 const MAX_CONTENT = 900;
@@ -11,10 +18,11 @@ function truncate(content: string): string {
 }
 
 /**
- * Quote a message body for an embed.
+ * Quote a message body.
  *
- * Content is wrapped in a code fence so mentions, markdown and invite links in
- * the original cannot render or ping from inside the log itself.
+ * Fenced so mentions, markdown and invite links in the original cannot render
+ * or ping from inside the log itself. The zero-width space defuses a fence
+ * inside the content that would otherwise break out of this one.
  */
 function quote(content: string | null | undefined): string {
   if (!content) return "*(no text content)*";
@@ -29,9 +37,9 @@ function messageLink(message: Message<boolean> | PartialMessage): string {
  * Detail logging - nickname changes, message edits and deletions.
  *
  * Separate from ModLogService on purpose: that records deliberate moderator
- * actions against a member and writes a durable ModLog row per entry. These
- * are high-volume ambient events, so they are posted to a channel only and
- * never stored, which keeps them off a database that has filled up before.
+ * actions and writes a durable ModLog row per entry. These are high-volume
+ * ambient events, so they are posted to a channel only and never stored, which
+ * keeps them off a database that has filled up before.
  */
 export class ServerLogService {
   private static findChannel(guild: Guild) {
@@ -55,20 +63,24 @@ export class ServerLogService {
 
   static async logNicknameChange(
     guild: Guild,
-    memberId: string,
-    username: string,
+    user: User,
     before: string | null,
     after: string | null,
   ): Promise<void> {
-    const embed = simpleEmbedExample();
-    embed.description = [
-      `**Member:** <@${memberId}> (${username})`,
-      `**Before:** ${before ? `\`${before}\`` : "*(none)*"}`,
-      `**After:** ${after ? `\`${after}\`` : "*(none)*"}`,
-    ].join("\n");
-    embed.footer!.text = "nickname changed";
-
-    await this.post(guild, embed);
+    await this.post(
+      guild,
+      logEmbed({
+        tone: "neutral",
+        user,
+        title: "Nickname changed",
+        lines: [
+          `<@${user.id}>`,
+          `**Before:** ${before ? `\`${before}\`` : "*(none)*"}`,
+          `**After:** ${after ? `\`${after}\`` : "*(none)*"}`,
+        ],
+        footer: "nickname changed",
+      }),
+    );
   }
 
   static async logMessageEdit(
@@ -77,46 +89,57 @@ export class ServerLogService {
   ): Promise<void> {
     if (!message.guild) return;
 
-    const embed = simpleEmbedExample();
-    embed.description = [
-      `**Author:** <@${message.author.id}> (${message.author.username})`,
-      `**Channel:** <#${message.channelId}>`,
-      `**Before:**`,
-      // An uncached original is common for older messages - say so rather than
-      // implying the message was empty.
-      before === null || before === undefined
-        ? "*(not cached - the bot did not have the original)*"
-        : quote(before),
-      `**After:**`,
-      quote(message.content),
-      `[Jump to message](${messageLink(message)})`,
-    ].join("\n");
-    embed.footer!.text = "message edited";
-
-    await this.post(message.guild, embed);
+    await this.post(
+      message.guild,
+      logEmbed({
+        tone: "caution",
+        user: message.author,
+        title: `Message edited in #${
+          "name" in message.channel ? message.channel.name : "unknown"
+        }`,
+        lines: [
+          `<@${message.author.id}> · [jump](${messageLink(message)})`,
+          "**Before**",
+          // An uncached original is normal for older messages - say so rather
+          // than implying the message was empty.
+          before === null || before === undefined
+            ? "*(not cached - the bot did not have the original)*"
+            : quote(before),
+          "**After**",
+          quote(message.content),
+        ],
+        footer: "message edited",
+      }),
+    );
   }
 
   static async logMessageDelete(
     message: Message<boolean> | PartialMessage,
     content: string,
+    author: User | null,
     authorId: string,
-    authorName: string,
     deletedById: string,
   ): Promise<void> {
     if (!message.guild) return;
 
-    const embed = simpleEmbedExample();
-    embed.description = [
-      `**Author:** <@${authorId}> (${authorName})`,
-      `**Deleted by:** ${
-        deletedById === authorId ? "*themselves*" : `<@${deletedById}>`
-      }`,
-      `**Channel:** <#${message.channelId}>`,
-      `**Content:**`,
-      quote(content),
-    ].join("\n");
-    embed.footer!.text = "message deleted";
-
-    await this.post(message.guild, embed);
+    await this.post(
+      message.guild,
+      logEmbed({
+        tone: "negative",
+        user: author,
+        title: `Message deleted in #${
+          message.channel && "name" in message.channel
+            ? message.channel.name
+            : "unknown"
+        }`,
+        lines: [
+          `<@${authorId}> · deleted by ${
+            deletedById === authorId ? "*themselves*" : `<@${deletedById}>`
+          }`,
+          quote(content),
+        ],
+        footer: "message deleted",
+      }),
+    );
   }
 }

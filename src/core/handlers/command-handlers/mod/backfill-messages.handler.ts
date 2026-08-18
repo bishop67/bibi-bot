@@ -24,6 +24,17 @@ export async function executeBackfillMessages(
     };
   }
 
+  // Checked before --reset does anything: clearing the record out from under
+  // a run in flight is worse than refusing, because that run keeps writing
+  // its own progress afterwards and the reset silently achieves nothing.
+  if (MessageBackfillService.isRunning(message.guild.id)) {
+    return {
+      success: false,
+      error:
+        "A backfill is already running here. Wait for it to finish, or restart the bot to stop it.",
+    };
+  }
+
   const reset = message.content.includes("--reset");
   if (reset) await MessageBackfillService.resetProgress(message.guild.id);
 

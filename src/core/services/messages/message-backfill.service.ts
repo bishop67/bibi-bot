@@ -34,6 +34,21 @@ export interface BackfillProgress {
 
 export class MessageBackfillService {
   /**
+   * Guilds with a backfill in flight.
+   *
+   * Two runs at once share one SyncProgress row and overwrite each other's
+   * record of it, so each undoes the other's bookkeeping and both re-read
+   * channels the other already finished. Nothing is corrupted - every insert
+   * ignores conflicts - but the work doubles and the progress messages
+   * contradict each other, which is how this was noticed.
+   */
+  private static running = new Set<string>();
+
+  static isRunning(guildId: string): boolean {
+    return this.running.has(guildId);
+  }
+
+  /**
    * Import a guild's existing message history into MemberMessages.
    *
    * The bot only ever counted what it saw live, so on a server that existed
@@ -46,6 +61,23 @@ export class MessageBackfillService {
    * restart is worse than storing a list of channel ids.
    */
   static async backfillGuild(
+    guild: Guild,
+    onProgress?: (progress: BackfillProgress) => void,
+  ): Promise<{ inserted: number; channelsDone: number; skipped: string[] }> {
+    if (this.running.has(guild.id)) {
+      throw new Error("A backfill is already running for this guild");
+    }
+
+    this.running.add(guild.id);
+
+    try {
+      return await this.run(guild, onProgress);
+    } finally {
+      this.running.delete(guild.id);
+    }
+  }
+
+  private static async run(
     guild: Guild,
     onProgress?: (progress: BackfillProgress) => void,
   ): Promise<{ inserted: number; channelsDone: number; skipped: string[] }> {

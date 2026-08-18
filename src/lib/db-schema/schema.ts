@@ -279,6 +279,10 @@ export const memberMessages = pgTable("MemberMessages", {
 	createdAt: timestamp({ precision: 3, mode: 'string' }).default(sql`CURRENT_TIMESTAMP`).notNull(),
 }, (table) => [
 	uniqueIndex("MemberMessages_messageId_key").using("btree", table.messageId.asc().nullsLast().op("text_ops")),
+	// Counted per message by the level-up check and the first-message spam
+	// filter. Without this it is a sequential scan of the largest table in the
+	// schema on every single message sent.
+	index("MemberMessages_memberId_guildId_idx").using("btree", table.memberId.asc().nullsLast().op("text_ops"), table.guildId.asc().nullsLast().op("text_ops")),
 	foreignKey({
 			columns: [table.guildId],
 			foreignColumns: [guild.guildId],

@@ -1,0 +1,1502 @@
+{
+  "id": "4b6b8aa5-4f17-4f0b-b26f-a43921bca44f",
+  "prevId": "4e34d86a-f5b2-4230-bb97-d2e785fe8fa0",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.Guild": {
+      "name": "Guild",
+      "schema": "",
+      "columns": {
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "guildName": {
+          "name": "guildName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lookback": {
+          "name": "lookback",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 9999
+        }
+      },
+      "indexes": {
+        "Guild_guildId_key": {
+          "name": "Guild_guildId_key",
+          "columns": [
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.GuildVoiceEvents": {
+      "name": "GuildVoiceEvents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channelId": {
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "join": {
+          "name": "join",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "leave": {
+          "name": "leave",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "GuildVoiceEvents_guildId_fkey": {
+          "name": "GuildVoiceEvents_guildId_fkey",
+          "tableFrom": "GuildVoiceEvents",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "GuildVoiceEvents_memberId_fkey": {
+          "name": "GuildVoiceEvents_memberId_fkey",
+          "tableFrom": "GuildVoiceEvents",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Member": {
+      "name": "Member",
+      "schema": "",
+      "columns": {
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accentColor": {
+          "name": "accentColor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bannerUrl": {
+          "name": "bannerUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "globalName": {
+          "name": "globalName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "avatarUrl": {
+          "name": "avatarUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avatarDecorationUrl": {
+          "name": "avatarDecorationUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bot": {
+          "name": "bot",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "discriminator": {
+          "name": "discriminator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "flags": {
+          "name": "flags",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "system": {
+          "name": "system",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "avatarDecorationData": {
+          "name": "avatarDecorationData",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "collectibles": {
+          "name": "collectibles",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hexAccentColor": {
+          "name": "hexAccentColor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "primaryGuild": {
+          "name": "primaryGuild",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "Member_memberId_key": {
+          "name": "Member_memberId_key",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberCommandHistory": {
+      "name": "MemberCommandHistory",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "command": {
+          "name": "command",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "channelId": {
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "MemberCommandHistory_guildId_fkey": {
+          "name": "MemberCommandHistory_guildId_fkey",
+          "tableFrom": "MemberCommandHistory",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberCommandHistory_memberId_fkey": {
+          "name": "MemberCommandHistory_memberId_fkey",
+          "tableFrom": "MemberCommandHistory",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberDeletedMessages": {
+      "name": "MemberDeletedMessages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "deletedByMemberId": {
+          "name": "deletedByMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messageMemberId": {
+          "name": "messageMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messageId": {
+          "name": "messageId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channelId": {
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "MemberDeletedMessages_deletedByMemberId_fkey": {
+          "name": "MemberDeletedMessages_deletedByMemberId_fkey",
+          "tableFrom": "MemberDeletedMessages",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "deletedByMemberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "MemberDeletedMessages_guildId_fkey": {
+          "name": "MemberDeletedMessages_guildId_fkey",
+          "tableFrom": "MemberDeletedMessages",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberDeletedMessages_messageMemberId_fkey": {
+          "name": "MemberDeletedMessages_messageMemberId_fkey",
+          "tableFrom": "MemberDeletedMessages",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "messageMemberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberGuild": {
+      "name": "MemberGuild",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nickname": {
+          "name": "nickname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moveCounter": {
+          "name": "moveCounter",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "moving": {
+          "name": "moving",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "moveTimeout": {
+          "name": "moveTimeout",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "warnings": {
+          "name": "warnings",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "muted": {
+          "name": "muted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "deafened": {
+          "name": "deafened",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "messageOptOut": {
+          "name": "messageOptOut",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "presenceOptOut": {
+          "name": "presenceOptOut",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "lookback": {
+          "name": "lookback",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 9999
+        },
+        "avatarUrl": {
+          "name": "avatarUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "displayHexColor": {
+          "name": "displayHexColor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "displayName": {
+          "name": "displayName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "highestRolePosition": {
+          "name": "highestRolePosition",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "joinedAt": {
+          "name": "joinedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presenceActivity": {
+          "name": "presenceActivity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presenceStatus": {
+          "name": "presenceStatus",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "presenceUpdatedAt": {
+          "name": "presenceUpdatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "bannerUrl": {
+          "name": "bannerUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avatarDecorationUrl": {
+          "name": "avatarDecorationUrl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "communicationDisabledUntil": {
+          "name": "communicationDisabledUntil",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "flags": {
+          "name": "flags",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending": {
+          "name": "pending",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "premiumSince": {
+          "name": "premiumSince",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avatarDecorationData": {
+          "name": "avatarDecorationData",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bannable": {
+          "name": "bannable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "displayColor": {
+          "name": "displayColor",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kickable": {
+          "name": "kickable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "manageable": {
+          "name": "manageable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "moderatable": {
+          "name": "moderatable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {
+        "MemberGuild_memberId_guildId_key": {
+          "name": "MemberGuild_memberId_guildId_key",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "MemberGuild_guildId_fkey": {
+          "name": "MemberGuild_guildId_fkey",
+          "tableFrom": "MemberGuild",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberGuild_memberId_fkey": {
+          "name": "MemberGuild_memberId_fkey",
+          "tableFrom": "MemberGuild",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberHelper": {
+      "name": "MemberHelper",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "threadId": {
+          "name": "threadId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "threadOwnerId": {
+          "name": "threadOwnerId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "MemberHelper_guildId_fkey": {
+          "name": "MemberHelper_guildId_fkey",
+          "tableFrom": "MemberHelper",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberHelper_memberId_fkey": {
+          "name": "MemberHelper_memberId_fkey",
+          "tableFrom": "MemberHelper",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberMessages": {
+      "name": "MemberMessages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messageId": {
+          "name": "messageId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channelId": {
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "MemberMessages_messageId_key": {
+          "name": "MemberMessages_messageId_key",
+          "columns": [
+            {
+              "expression": "messageId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "MemberMessages_memberId_guildId_idx": {
+          "name": "MemberMessages_memberId_guildId_idx",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "MemberMessages_guildId_fkey": {
+          "name": "MemberMessages_guildId_fkey",
+          "tableFrom": "MemberMessages",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberMessages_memberId_fkey": {
+          "name": "MemberMessages_memberId_fkey",
+          "tableFrom": "MemberMessages",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberRole": {
+      "name": "MemberRole",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "roleId": {
+          "name": "roleId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "color": {
+          "name": "color",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "hexColor": {
+          "name": "hexColor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hoist": {
+          "name": "hoist",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "managed": {
+          "name": "managed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mentionable": {
+          "name": "mentionable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unicodeEmoji": {
+          "name": "unicodeEmoji",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "MemberRole_memberId_guildId_idx": {
+          "name": "MemberRole_memberId_guildId_idx",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "MemberRole_memberId_roleId_key": {
+          "name": "MemberRole_memberId_roleId_key",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "roleId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "MemberRole_guildId_fkey": {
+          "name": "MemberRole_guildId_fkey",
+          "tableFrom": "MemberRole",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "cascade"
+        },
+        "MemberRole_memberId_fkey": {
+          "name": "MemberRole_memberId_fkey",
+          "tableFrom": "MemberRole",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberUpdateQueue": {
+      "name": "MemberUpdateQueue",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "priority": {
+          "name": "priority",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "MemberUpdateQueue_memberId_guildId_key": {
+          "name": "MemberUpdateQueue_memberId_guildId_key",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.MemberWarning": {
+      "name": "MemberWarning",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "memberId": {
+          "name": "memberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "moderatorId": {
+          "name": "moderatorId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "MemberWarning_memberId_guildId_idx": {
+          "name": "MemberWarning_memberId_guildId_idx",
+          "columns": [
+            {
+              "expression": "memberId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "MemberWarning_guildId_fkey": {
+          "name": "MemberWarning_guildId_fkey",
+          "tableFrom": "MemberWarning",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "MemberWarning_memberId_fkey": {
+          "name": "MemberWarning_memberId_fkey",
+          "tableFrom": "MemberWarning",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "memberId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "MemberWarning_moderatorId_fkey": {
+          "name": "MemberWarning_moderatorId_fkey",
+          "tableFrom": "MemberWarning",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "moderatorId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ModLog": {
+      "name": "ModLog",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "targetId": {
+          "name": "targetId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "moderatorId": {
+          "name": "moderatorId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channelId": {
+          "name": "channelId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logMessageId": {
+          "name": "logMessageId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "ModLog_guildId_createdAt_idx": {
+          "name": "ModLog_guildId_createdAt_idx",
+          "columns": [
+            {
+              "expression": "guildId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops"
+            },
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ModLog_guildId_fkey": {
+          "name": "ModLog_guildId_fkey",
+          "tableFrom": "ModLog",
+          "tableTo": "Guild",
+          "columnsFrom": [
+            "guildId"
+          ],
+          "columnsTo": [
+            "guildId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "ModLog_targetId_fkey": {
+          "name": "ModLog_targetId_fkey",
+          "tableFrom": "ModLog",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "targetId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "ModLog_moderatorId_fkey": {
+          "name": "ModLog_moderatorId_fkey",
+          "tableFrom": "ModLog",
+          "tableTo": "Member",
+          "columnsFrom": [
+            "moderatorId"
+          ],
+          "columnsTo": [
+            "memberId"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.SyncProgress": {
+      "name": "SyncProgress",
+      "schema": "",
+      "columns": {
+        "guildId": {
+          "name": "guildId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processedIds": {
+          "name": "processedIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{\"RAY\"}'"
+        },
+        "failedIds": {
+          "name": "failedIds",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{\"RAY\"}'"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "SyncProgress_pkey": {
+          "name": "SyncProgress_pkey",
+          "columns": [
+            "type",
+            "guildId"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

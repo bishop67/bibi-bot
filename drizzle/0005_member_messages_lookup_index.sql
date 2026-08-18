@@ -1,0 +1,1 @@
+CREATE INDEX "MemberMessages_memberId_guildId_idx" ON "MemberMessages" USING btree ("memberId" text_ops,"guildId" text_ops);

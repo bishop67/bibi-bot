@@ -36,6 +36,13 @@
       "when": 1786988211004,
       "tag": "0004_drop_site_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787018403892,
+      "tag": "0005_member_messages_lookup_index",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import "@dotenvx/dotenvx/config";
 
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
+import { migrationsReady } from "@/lib/db";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
 import {
   BACKGROUND_WORKERS_ENABLED,
@@ -181,6 +182,9 @@ const main = async () => {
     botLogger.error("Could not find TOKEN in environment");
     throw Error("Could not find TOKEN in your environment");
   }
+
+  // Nothing may query before the schema is settled - see migrationsReady.
+  await migrationsReady;
 
   await bot.login(token);
 

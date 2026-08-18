@@ -46,6 +46,10 @@ export class MemberUpdateQueueService {
     if (this.isProcessing) return;
     this.isProcessing = true;
 
+    // Kept outside the try so a failure can still identify the row - see the
+    // catch below.
+    let currentItemId: number | null = null;
+
     try {
       const item = await db.query.memberUpdateQueue.findFirst({
         orderBy: asc(memberUpdateQueue.createdAt),
@@ -53,12 +57,14 @@ export class MemberUpdateQueueService {
 
       if (!item) return;
 
+      currentItemId = item.id;
+
       if (VerifyAllUsersService.isVerificationRunning(item.guildId)) return;
 
       const deleteItem = () =>
         db.delete(memberUpdateQueue)
           .where(eq(memberUpdateQueue.id, item.id))
-          .catch(() => {});
+          .catch((e) => error("Failed to remove queue item:", e));
 
       const guild = bot.guilds.cache.get(item.guildId);
       if (!guild) {
@@ -86,6 +92,18 @@ export class MemberUpdateQueueService {
       await deleteItem();
     } catch (err) {
       error(`Failed to process queue item:`, err);
+
+      // The oldest row is always picked first, so an item that fails every
+      // time is retried forever and blocks every member queued behind it.
+      // Send it to the back instead: it still gets another chance, without
+      // holding up the queue.
+      if (currentItemId !== null) {
+        await db
+          .update(memberUpdateQueue)
+          .set({ createdAt: new Date().toISOString() })
+          .where(eq(memberUpdateQueue.id, currentItemId))
+          .catch((e) => error("Failed to requeue item:", e));
+      }
     } finally {
       this.isProcessing = false;
     }

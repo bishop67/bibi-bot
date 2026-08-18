@@ -23,6 +23,7 @@ export class GuildBanAdd {
       action: "ban",
       targetId: ban.user.id,
       targetName: ban.user.username,
+      targetUser: ban.user,
       moderatorId: actor?.moderatorId,
       moderatorName: actor?.moderatorName,
       reason: actor?.reason ?? ban.reason ?? undefined,

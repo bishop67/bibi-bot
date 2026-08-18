@@ -37,18 +37,24 @@ export class GuildMemberRemove {
     );
 
     if (kicked) {
+      // Mod log only. The mod-log entry names the moderator and the reason, so
+      // a second "kicked from the server" notice adds nothing - and with
+      // MOD_LOG_CHANNELS and JOIN_EVENT_CHANNELS pointing at the same channel
+      // it reads as the same kick being reported twice. Bans already work this
+      // way; kicks now match.
       await ModLogService.postLog({
         guild: member.guild,
         action: "kick",
         targetId: member.id,
         targetName: member.user.username,
+        targetUser: member.user,
         moderatorId: kicked.moderatorId,
         moderatorName: kicked.moderatorName,
         reason: kicked.reason,
       });
+    } else {
+      await MembersService.logJoinLeaveEvents(member, "leave");
     }
-
-    await MembersService.logJoinLeaveEvents(member, kicked ? "kick" : "leave");
 
     // create or update user with his roles
     await MembersService.upsertDbMember(member, "leave");

@@ -5,7 +5,7 @@ import { logEmbed, type LogTone } from "@/core/embeds/log.embed";
 import { MOD_LOG_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
 import { eq } from "drizzle-orm";
-import type { APIEmbed, Guild, TextChannel } from "discord.js";
+import type { APIEmbed, Guild, TextChannel, User } from "discord.js";
 
 export type ModLogAction =
   | "warn"
@@ -91,6 +91,7 @@ export class ModLogService {
     action,
     targetId,
     targetName,
+    targetUser,
     moderatorId,
     moderatorName,
     reason,
@@ -99,6 +100,8 @@ export class ModLogService {
     action: ModLogAction;
     targetId: string;
     targetName?: string;
+    /** Needed for kicks and bans: the member is gone from cache by then. */
+    targetUser?: User | null;
     moderatorId?: string;
     moderatorName?: string;
     reason?: string;
@@ -121,7 +124,7 @@ export class ModLogService {
         if (logChannel?.isTextBased()) {
           const embed: APIEmbed = logEmbed({
             tone: ACTION_TONES[action],
-            user: guild.members.cache.get(targetId)?.user ?? null,
+            user: targetUser ?? guild.members.cache.get(targetId)?.user ?? null,
             title: ACTION_TITLES[action],
             lines: [
               `<@${targetId}> (${resolvedTargetName})`,

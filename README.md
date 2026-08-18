@@ -64,13 +64,8 @@ response would never notice.
 | `/warnings`      | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional) |
 | `/report`        | Report a member to the moderators                      | `user`, `reason`          |
 | `/time`          | Current time around the world, or one place            | `location` (optional)     |
-| `/privacy`       | See or change what the bot stores about you            | subcommands below         |
 | `/lookback-me`   | Change your own lookback range                         | `lookback`                |
 | `/status`        | Bot CPU and memory                                     |                           |
-
-`/privacy status`, `/privacy optout` and `/privacy optin` take a `scope` of
-`message`, `presence` or `all`. Opting out of `message` deletes what is already
-stored and stops future storage.
 
 ### Moderator (Manage Roles)
 

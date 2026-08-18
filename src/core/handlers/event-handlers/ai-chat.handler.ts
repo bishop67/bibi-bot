@@ -1,5 +1,4 @@
 import { AiChatService } from "@/core/services/ai/ai-chat.service";
-import { PrivacyService } from "@/core/services/privacy/privacy.service";
 import { createAiTools, BIBI_PATTERN } from "@/shared/ai/ai-tools";
 import { ConfigValidator } from "@/shared/config/validator";
 import { error } from "console";
@@ -11,18 +10,6 @@ export async function handleAiChatMessage(
   client: Client,
 ): Promise<void> {
   if (!shouldRespond(message, client)) return;
-
-  if (
-    message.guildId &&
-    (await PrivacyService.hasMessageOptOut(message.author.id, message.guildId))
-  ) {
-    await message.reply({
-      content:
-        "You have opted out of message content processing, so I can't read your messages. Use /privacy optin to re-enable.",
-      flags: [MessageFlags.SuppressEmbeds],
-    });
-    return;
-  }
 
   if ("sendTyping" in message.channel) {
     await message.channel.sendTyping();

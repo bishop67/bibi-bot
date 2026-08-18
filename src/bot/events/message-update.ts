@@ -1,6 +1,5 @@
 import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { MessagesService } from "@/core/services/messages/messages.service";
-import { PrivacyService } from "@/core/services/privacy/privacy.service";
 import { isSpamExempt } from "@/core/services/spam/spam-exempt";
 import type { ArgsOf, Client } from "discordx";
 import { Discord, On } from "discordx";
@@ -26,14 +25,6 @@ export class MessageUpdate {
       // Acted on: the message is gone, so there is nothing left to sync.
       if (await MessagesService.checkWarnings(message)) return;
     }
-
-    // Members who opted out of message storage are not logged either - the
-    // channel post is as much a record of their content as the table is.
-    if (
-      message.guildId &&
-      (await PrivacyService.hasMessageOptOut(message.author.id, message.guildId))
-    )
-      return;
 
     await ServerLogService.logMessageEdit(message, oldMessage.content);
   }

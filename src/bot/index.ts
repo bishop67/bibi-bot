@@ -37,7 +37,6 @@ import "./commands/mod/warnings";
 
 // Commands - User
 import "./commands/user/lookback-me";
-import "./commands/user/privacy";
 import "./commands/user/stats";
 import "./commands/user/report";
 import "./commands/user/time";

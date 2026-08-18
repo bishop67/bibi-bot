@@ -3,7 +3,6 @@ import { isLogExempt } from "@/core/services/logging/log-exempt";
 import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
-import { PrivacyService } from "@/core/services/privacy/privacy.service";
 import { isStaffMember } from "@/shared/config/staff";
 import { db } from "@/lib/db";
 import { memberMessages, memberDeletedMessages, memberGuild } from "@/lib/db-schema";
@@ -36,8 +35,6 @@ export class MessagesService {
     // if info doesnt exist
     if (!content || !guildId || !memberId || message.interaction?.user.bot)
       return;
-
-    if (await PrivacyService.hasMessageOptOut(memberId, guildId)) return;
 
     // catch message edits
     try {
@@ -99,8 +96,6 @@ export class MessagesService {
 
     const messageMemberId = message.member?.user?.id;
     let deletedByMemberId = messageMemberId;
-
-    if (await PrivacyService.hasMessageOptOut(messageMemberId, guildId)) return;
 
     try {
       const auditLogs = await message.guild.fetchAuditLogs({

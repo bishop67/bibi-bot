@@ -4,10 +4,11 @@ import type { CommandResult } from "@/types";
 import { PermissionFlagsBits } from "discord.js";
 import type { SimpleCommandMessage } from "discordx";
 
-// Discord serves 100 messages a request, so a busy server takes a while.
-// Reporting every channel would be its own spam; this is often enough to show
-// it is alive without flooding the channel it was started in.
-const PROGRESS_EVERY = 10;
+// The service reports on every channel and every page it fetches. Editing a
+// Discord message that often would be rate limited long before it was useful,
+// so the throttle belongs here rather than in what gets reported - a channel
+// holding tens of thousands of messages should still show it is moving.
+const EDIT_EVERY_MS = 5000;
 
 export async function executeBackfillMessages(
   command: SimpleCommandMessage,
@@ -32,15 +33,19 @@ export async function executeBackfillMessages(
       : "Starting message backfill. Channels already done are skipped - add `--reset` to start over.",
   );
 
+  let lastEdit = 0;
+
   try {
     const result = await MessageBackfillService.backfillGuild(
       message.guild,
-      async (progress) => {
-        if (progress.channelsDone % PROGRESS_EVERY !== 0) return;
+      (progress) => {
+        const now = Date.now();
+        if (now - lastEdit < EDIT_EVERY_MS) return;
+        lastEdit = now;
 
-        await status
+        void status
           .edit(
-            `Backfilling: ${progress.channelsDone}/${progress.channelsTotal} channels, ${progress.inserted} messages stored. Last: #${progress.channelName}`,
+            `Backfilling #${progress.channelName} - ${progress.channelsDone}/${progress.channelsTotal} channels, ${progress.inserted} messages stored.`,
           )
           .catch(() => {});
       },

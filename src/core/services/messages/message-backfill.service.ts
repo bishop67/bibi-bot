@@ -9,7 +9,7 @@ import {
   Guild,
   GuildTextBasedChannel,
   PermissionFlagsBits,
-  ThreadChannel,
+  TextChannel,
 } from "discord.js";
 
 const SYNC_TYPE = "messages";
@@ -50,7 +50,7 @@ export class MessageBackfillService {
     onProgress?: (progress: BackfillProgress) => void,
   ): Promise<{ inserted: number; channelsDone: number; skipped: string[] }> {
     const done = new Set(await this.loadProgress(guild.id));
-    const channels = this.collectChannels(guild);
+    const channels = await this.collectChannels(guild);
     const skipped: string[] = [];
     let inserted = 0;
     let channelsDone = 0;
@@ -67,8 +67,25 @@ export class MessageBackfillService {
         continue;
       }
 
+      // Reported before the work, not after: a channel with tens of
+      // thousands of messages takes minutes, and saying nothing until it
+      // finishes is indistinguishable from having hung.
+      onProgress?.({
+        channelsDone,
+        channelsTotal: channels.length,
+        inserted,
+        channelName: channel.name,
+      });
+
       try {
-        inserted += await this.backfillChannel(channel, guild.id);
+        inserted += await this.backfillChannel(channel, guild.id, (soFar) =>
+          onProgress?.({
+            channelsDone,
+            channelsTotal: channels.length,
+            inserted: inserted + soFar,
+            channelName: channel.name,
+          }),
+        );
       } catch (err) {
         // A channel that cannot be read is not a reason to abandon the rest,
         // but it must not be marked done either - leaving it out means a
@@ -85,13 +102,6 @@ export class MessageBackfillService {
 
       done.add(channel.id);
       await this.saveProgress(guild.id, done);
-
-      onProgress?.({
-        channelsDone,
-        channelsTotal: channels.length,
-        inserted,
-        channelName: channel.name,
-      });
     }
 
     return { inserted, channelsDone, skipped };
@@ -135,8 +145,20 @@ export class MessageBackfillService {
       });
   }
 
-  private static collectChannels(guild: Guild): GuildTextBasedChannel[] {
-    const channels: GuildTextBasedChannel[] = [];
+  /**
+   * Every channel in the guild that can hold messages, threads included.
+   *
+   * Deliberately not `channels.cache` alone. Threads are only cached while
+   * something has reason to keep them, and archived ones never are - on a
+   * forum-heavy server that silently skips most of what people wrote, which
+   * is the opposite of a backfill's job. Active threads come guild-wide in
+   * one call; archived ones have to be asked for per parent.
+   */
+  private static async collectChannels(
+    guild: Guild,
+  ): Promise<GuildTextBasedChannel[]> {
+    const byId = new Map<string, GuildTextBasedChannel>();
+    const parents: (TextChannel | ForumChannel)[] = [];
 
     for (const channel of guild.channels.cache.values()) {
       if (
@@ -148,24 +170,49 @@ export class MessageBackfillService {
           ChannelType.GuildMedia,
         ].includes(channel.type)
       ) {
-        channels.push(channel as GuildTextBasedChannel);
-      } else if (
-        [
-          ChannelType.PublicThread,
-          ChannelType.PrivateThread,
-          ChannelType.AnnouncementThread,
-        ].includes(channel.type)
+        byId.set(channel.id, channel as GuildTextBasedChannel);
+      }
+
+      // A forum holds no messages of its own - its posts are threads - so it
+      // is a parent to search rather than a channel to read.
+      if (
+        channel.type === ChannelType.GuildForum ||
+        channel.type === ChannelType.GuildText ||
+        channel.type === ChannelType.GuildAnnouncement ||
+        channel.type === ChannelType.GuildMedia
       ) {
-        channels.push(channel as ThreadChannel as GuildTextBasedChannel);
-      } else if (channel.type === ChannelType.GuildForum) {
-        // A forum holds no messages itself; its posts are the threads.
-        for (const thread of (channel as ForumChannel).threads.cache.values()) {
-          channels.push(thread as GuildTextBasedChannel);
+        parents.push(channel as TextChannel | ForumChannel);
+      }
+    }
+
+    const active = await guild.channels.fetchActiveThreads().catch(() => null);
+    for (const thread of active?.threads.values() ?? []) {
+      byId.set(thread.id, thread as GuildTextBasedChannel);
+    }
+
+    for (const parent of parents) {
+      for (const type of ["public", "private"] as const) {
+        let before: string | undefined;
+
+        for (;;) {
+          const archived = await parent.threads
+            .fetchArchived({ type, limit: 100, ...(before ? { before } : {}) })
+            .catch(() => null);
+
+          if (!archived || archived.threads.size === 0) break;
+
+          for (const thread of archived.threads.values()) {
+            byId.set(thread.id, thread as GuildTextBasedChannel);
+          }
+
+          if (!archived.hasMore) break;
+          before = archived.threads.last()?.id;
+          if (!before) break;
         }
       }
     }
 
-    return channels;
+    return [...byId.values()];
   }
 
   private static canRead(channel: GuildTextBasedChannel, guild: Guild) {
@@ -182,6 +229,7 @@ export class MessageBackfillService {
   private static async backfillChannel(
     channel: GuildTextBasedChannel,
     guildId: string,
+    onPage?: (insertedSoFar: number) => void,
   ): Promise<number> {
     let before: string | undefined;
     let inserted = 0;
@@ -248,6 +296,7 @@ export class MessageBackfillService {
       }
 
       if (batch.length >= INSERT_BATCH) await flush();
+      onPage?.(inserted + batch.length);
       if (page.size < PAGE_SIZE) break;
     }
 

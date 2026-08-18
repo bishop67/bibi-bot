@@ -1,4 +1,5 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { isLogExempt } from "@/core/services/logging/log-exempt";
 import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
@@ -86,6 +87,11 @@ export class MessagesService {
       message.interaction?.user.bot
     )
       return;
+
+    // Not logging a staff channel but still storing its content would leave it
+    // readable via /log-deleted-messages-history - the privacy hole this is
+    // meant to close.
+    if (isLogExempt(message.channel)) return;
 
     const messageMemberId = message.member?.user?.id;
     let deletedByMemberId = messageMemberId;

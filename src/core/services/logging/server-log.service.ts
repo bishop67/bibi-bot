@@ -1,4 +1,5 @@
 import { logEmbed } from "@/core/embeds/log.embed";
+import { isLogExempt } from "@/core/services/logging/log-exempt";
 import { SERVER_LOG_CHANNELS } from "@/shared/config/channels";
 import type {
   APIEmbed,
@@ -88,6 +89,7 @@ export class ServerLogService {
     before: string | null | undefined,
   ): Promise<void> {
     if (!message.guild) return;
+    if (isLogExempt(message.channel)) return;
 
     await this.post(
       message.guild,
@@ -121,6 +123,7 @@ export class ServerLogService {
     deletedById: string,
   ): Promise<void> {
     if (!message.guild) return;
+    if (isLogExempt(message.channel)) return;
 
     await this.post(
       message.guild,

@@ -28,6 +28,7 @@ interface FeatureBotEnvironment {
   VOICE_EVENT_CHANNELS: string;
   JOIN_EVENT_CHANNELS: string;
   SERVER_LOG_CHANNELS: string;
+  LOG_EXEMPT_CHANNELS: string;
   MEMBERS_COUNT_CHANNELS: string;
   REPORT_CHANNELS: string;
 

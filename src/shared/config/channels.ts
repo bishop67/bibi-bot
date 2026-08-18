@@ -37,3 +37,14 @@ const parsedServerLogChannels =
 export const SERVER_LOG_CHANNELS = parsedServerLogChannels.length
   ? parsedServerLogChannels
   : JOIN_EVENT_CHANNELS;
+
+// Channels the bot must not log from - staff rooms, and busy information
+// channels where edit spam is just clutter.
+//
+// Matches a channel's own name OR the name of the category it sits in, so a
+// whole staff category can be excluded once instead of listing every channel
+// and remembering to update it whenever somebody adds another.
+export const LOG_EXEMPT_CHANNELS =
+  process.env.LOG_EXEMPT_CHANNELS?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];

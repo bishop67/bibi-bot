@@ -1,0 +1,17 @@
+bibi-bot
+========
+
+This project is a fork of https://github.com/0-don/coding.global-bot.
+
+The MIT licence in LICENSE is granted by bishop076 and covers the commits
+authored by bishop076 only.
+
+The upstream project carries no licence file and declares none in its
+package.json, so its commits are, by default, all rights reserved by their
+authors (0-don and other contributors, whose authorship is preserved in this
+repository's history). No licence is granted over that work here, because it is
+not this project's to grant.
+
+If you intend to reuse this code beyond what upstream's terms allow, resolve it
+with the upstream authors first. The clean fix is for upstream to add a licence
+of their choosing.

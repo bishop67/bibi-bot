@@ -124,7 +124,7 @@ export class MembersService {
   // only user and guild are read, both of which are present either way.
   static async logJoinLeaveEvents(
     discordMember: GuildMember | PartialGuildMember,
-    event: "join" | "leave",
+    event: "join" | "leave" | "kick",
   ) {
     try {
       if (!ConfigValidator.isFeatureEnabled("JOIN_EVENT_CHANNELS")) {
@@ -148,6 +148,9 @@ export class MembersService {
       if (event === "join") {
         joinEmbed.description = `${userServerName} (${userGlobalName}) joined the server ✅`;
         joinEmbed.footer!.text = "join";
+      } else if (event === "kick") {
+        joinEmbed.description = `${userServerName} (${userGlobalName}) was kicked 👢`;
+        joinEmbed.footer!.text = "kick";
       } else {
         joinEmbed.description = `${userServerName} (${userGlobalName}) left the server 🚪`;
         joinEmbed.footer!.text = "leave";

@@ -13,7 +13,12 @@ export type ModLogAction =
   | "delete-warning"
   | "clear-warnings"
   | "jail"
-  | "unjail";
+  | "unjail"
+  | "kick"
+  | "ban"
+  | "unban"
+  | "timeout"
+  | "untimeout";
 
 const ACTION_TITLES: Record<ModLogAction, string> = {
   warn: "Member Warned",
@@ -21,6 +26,11 @@ const ACTION_TITLES: Record<ModLogAction, string> = {
   "delete-warning": "Warning Deleted",
   "clear-warnings": "Warnings Cleared",
   jail: "Member Jailed",
+  kick: "Member Kicked",
+  ban: "Member Banned",
+  unban: "Member Unbanned",
+  timeout: "Member Timed Out",
+  untimeout: "Timeout Removed",
   unjail: "Member Unjailed",
 };
 

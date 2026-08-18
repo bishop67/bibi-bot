@@ -1,6 +1,8 @@
 // Events
 import "./events/_ready";
 import "./events/ai-chat";
+import "./events/guild-ban-add";
+import "./events/guild-ban-remove";
 import "./events/guild-member-add";
 import "./events/guild-member-remove";
 import "./events/guild-member-update";

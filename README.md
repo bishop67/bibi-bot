@@ -144,6 +144,12 @@ is deliberately exempt from the staff guard — so list the staff roles in
 `DELETE_EXEMPT_ROLES` too if you want their history to survive that. The boot
 check reports any name in either list that matches no role.
 
+**Jailing someone already jailed is refused.** It cannot punish them further,
+and its sweep would delete the protected channels the first jail spared — by
+then they hold no exempt role for it to match. `/jail` reports this instead of
+acting; unjail first if you need to widen the deletion window. The automated
+filters stop at the same point.
+
 **Warnings have one source of truth.** `MemberWarning` rows are authoritative;
 `memberGuild.warnings` is a derived counter kept in sync from them.
 

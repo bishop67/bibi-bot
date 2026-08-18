@@ -66,7 +66,8 @@ export class DeleteUserMessagesService {
   static async jailAndDeleteMessages(params: DeleteUserMessagesParams) {
     if (params.automated && (await this.isAutoJailExempt(params))) return;
 
-    await this.jailUser(params);
+    const { alreadyJailed } = await this.jailUser(params);
+    if (alreadyJailed) return;
 
     if (params.deleteMessages === false) return;
     this.deleteUserMessages(params).catch(error);
@@ -103,10 +104,18 @@ export class DeleteUserMessagesService {
 
   /**
    * Apply jail role, update DB, send notification. Fast operation (~2s).
+   *
+   * Jailing someone who is already jailed does nothing. There is nothing left
+   * to escalate - they hold the role, and the first jail stripped everything
+   * else - so the only part that would still run is the message sweep, and by
+   * then DELETE_EXEMPT_ROLES has no role left to match. A second jail would
+   * therefore clear the protected channels the first one deliberately spared,
+   * unrecoverably. Refusing is the only outcome consistent with the first
+   * jail; to widen the deletion window, unjail first.
    */
-  static async jailUser(params: DeleteUserMessagesParams) {
-    await this.captureDeleteExemption(params);
-
+  static async jailUser(
+    params: DeleteUserMessagesParams,
+  ): Promise<{ alreadyJailed: boolean }> {
     const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]
       ?.id;
 
@@ -123,14 +132,26 @@ export class DeleteUserMessagesService {
           reason: params.reason,
         },
       );
-      return;
+      return { alreadyJailed: false };
     }
 
     const memberId = params.user?.id || params.memberId;
     const discordMember =
       params.guild.members.cache.get(memberId) ||
       (await params.guild.members.fetch(memberId).catch(() => null));
-    const alreadyJailed = discordMember?.roles.cache.has(jailRoleId);
+
+    if (discordMember?.roles.cache.has(jailRoleId)) {
+      botLogger.info("Member is already jailed - leaving them as they are", {
+        guildId: params.guild.id,
+        memberId,
+        reason: params.reason,
+      });
+      return { alreadyJailed: true };
+    }
+
+    // Read before the role is applied: adding it makes the status-role handler
+    // strip every other role they hold.
+    await this.captureDeleteExemption(params);
 
     await db.transaction(async (tx) => {
       await tx
@@ -160,17 +181,17 @@ export class DeleteUserMessagesService {
     if (discordMember && role?.editable)
       await discordMember.roles.add(jailRoleId).catch(error);
 
-    if (!alreadyJailed) {
-      await ModLogService.postLog({
-        guild: params.guild,
-        action: "jail",
-        targetId: params.memberId,
-        targetName: params.user?.username ?? "Unknown User",
-        reason: params.reason,
-      });
+    await ModLogService.postLog({
+      guild: params.guild,
+      action: "jail",
+      targetId: params.memberId,
+      targetName: params.user?.username ?? "Unknown User",
+      reason: params.reason,
+    });
 
-      await this.sendJailNotification(params);
-    }
+    await this.sendJailNotification(params);
+
+    return { alreadyJailed: false };
   }
 
   /**

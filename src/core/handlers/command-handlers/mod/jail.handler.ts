@@ -29,7 +29,17 @@ export async function executeJail(
 
   // Deliberately not marked `automated`, so a moderator can still jail a
   // staff member by hand even though the filters never will.
-  await DeleteUserMessagesService.jailUser(params);
+  const { alreadyJailed } = await DeleteUserMessagesService.jailUser(params);
+
+  // Refused rather than repeated: a second jail cannot punish them further,
+  // but its sweep would delete the protected channels the first one spared.
+  if (alreadyJailed) {
+    return {
+      success: false,
+      error:
+        "That member is already jailed. Unjail them first if you need to delete more of their messages.",
+    };
+  }
 
   if (!deleteMessages) {
     return { success: true, message: "User jailed. No messages were deleted." };

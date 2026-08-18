@@ -10,7 +10,7 @@ export class LookbackMembers {
   @Slash({
     name: "lookback-members",
     description: "Change lookback date range for guild",
-    defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
+    defaultMemberPermissions: PermissionFlagsBits.Administrator,
     dmPermission: false,
   })
   async lookbackMembers(

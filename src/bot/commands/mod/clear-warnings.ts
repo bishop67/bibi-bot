@@ -13,7 +13,7 @@ export class ClearWarnings {
   @Slash({
     name: "clear-warnings",
     description: "Clear all warnings for a member",
-    defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
+    defaultMemberPermissions: PermissionFlagsBits.Administrator,
     dmPermission: false,
   })
   async clearWarnings(

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
-import { JAIL } from "@/shared/config/roles";
+import { JAIL, MEMBER_ROLES } from "@/shared/config/roles";
 import { isStaffMember } from "@/shared/config/staff";
 import { TEMPLATE_VALIDATION_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
@@ -165,6 +165,107 @@ export class DeleteUserMessagesService {
 
       await this.sendJailNotification(params);
     }
+  }
+
+  /**
+   * Release a member from jail.
+   *
+   * Note what this cannot do: jailUser deletes every MemberRole row the member
+   * had and the status-role handler strips their Discord roles, so their
+   * previous roles are already gone by the time anyone unjails them. The best
+   * available outcome is removing the jail role and restoring the configured
+   * default member role, which is why that record loss is worth knowing about.
+   */
+  static async unjailUser(params: {
+    guild: Guild;
+    memberId: string;
+    user: User | null;
+    moderatorId?: string;
+    moderatorName?: string;
+    reason?: string;
+  }): Promise<{ ok: boolean; message: string }> {
+    const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]?.id;
+
+    if (!jailRoleId) {
+      botLogger.error(
+        "Cannot unjail: this guild has no role matching the configured jail name",
+        { guildId: params.guild.id, jailRoleName: JAIL ?? "(unset)" },
+      );
+      return { ok: false, message: "No jail role is configured on this server." };
+    }
+
+    const discordMember =
+      params.guild.members.cache.get(params.memberId) ||
+      (await params.guild.members.fetch(params.memberId).catch(() => null));
+
+    if (!discordMember) {
+      return { ok: false, message: "That member is not in the server." };
+    }
+
+    if (!discordMember.roles.cache.has(jailRoleId)) {
+      return { ok: false, message: "That member is not jailed." };
+    }
+
+    const role = params.guild.roles.cache.get(jailRoleId);
+    if (!role?.editable) {
+      return {
+        ok: false,
+        message: "I cannot manage the jail role - it sits above my highest role.",
+      };
+    }
+
+    await discordMember.roles.remove(jailRoleId).catch(error);
+
+    await db
+      .delete(memberRole)
+      .where(
+        and(
+          eq(memberRole.memberId, params.memberId),
+          eq(memberRole.guildId, params.guild.id),
+          eq(memberRole.roleId, jailRoleId),
+        ),
+      );
+
+    // Their original roles are unrecoverable, so put back the default member
+    // role rather than leaving them with nothing.
+    const restored: string[] = [];
+    for (const name of MEMBER_ROLES) {
+      const memberRoleToAdd = params.guild.roles.cache.find(
+        (r) => r.name === name,
+      );
+      if (!memberRoleToAdd?.editable) continue;
+      if (discordMember.roles.cache.has(memberRoleToAdd.id)) continue;
+
+      await discordMember.roles.add(memberRoleToAdd.id).catch(error);
+      restored.push(name);
+
+      await db
+        .insert(memberRole)
+        .values({
+          roleId: memberRoleToAdd.id,
+          memberId: params.memberId,
+          guildId: params.guild.id,
+          name,
+        })
+        .onConflictDoNothing();
+    }
+
+    await ModLogService.postLog({
+      guild: params.guild,
+      action: "unjail",
+      targetId: params.memberId,
+      targetName: params.user?.username,
+      moderatorId: params.moderatorId,
+      moderatorName: params.moderatorName,
+      reason: params.reason,
+    });
+
+    return {
+      ok: true,
+      message: restored.length
+        ? `Unjailed. Restored: ${restored.join(", ")}. Any other roles they had were lost when they were jailed.`
+        : "Unjailed. Any roles they had were lost when they were jailed, so they may need re-adding.",
+    };
   }
 
   /**

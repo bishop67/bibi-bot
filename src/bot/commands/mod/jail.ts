@@ -1,4 +1,4 @@
-import { executeDeleteUserMessages } from "@/core/handlers/command-handlers/mod/delete-user-messages.handler";
+import { executeJail } from "@/core/handlers/command-handlers/mod/jail.handler";
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
@@ -10,14 +10,14 @@ import {
 import { Discord, Slash, SlashOption } from "discordx";
 
 @Discord()
-export class DeleteUserMessages {
+export class Jail {
   @Slash({
-    name: "delete-user-messages",
-    description: "Deletes messages from a channel",
+    name: "jail",
+    description: "Jail a member, optionally purging their recent messages",
     defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
     dmPermission: false,
   })
-  async deleteUserMessages(
+  async jail(
     @SlashOption({
       name: "user",
       description: "Select existing user",
@@ -31,14 +31,8 @@ export class DeleteUserMessages {
     })
     userId: string,
     @SlashOption({
-      name: "jail",
-      description: "Should user be jailed",
-      type: ApplicationCommandOptionType.Boolean,
-    })
-    jail: boolean = false,
-    @SlashOption({
       name: "reason",
-      description: "Reason for jailing (shown in jail channel)",
+      description: "Reason for the jail (shown in the jail channel)",
       type: ApplicationCommandOptionType.String,
       required: false,
     })
@@ -68,16 +62,15 @@ export class DeleteUserMessages {
           channelId: interaction.channelId,
           memberId: interaction.member.user.id,
           guildId: interaction.guildId,
-          command: "delete-user-messages",
+          command: "jail",
         })
         .catch(() => {});
     }
 
-    const result = await executeDeleteUserMessages(
+    const result = await executeJail(
       interaction,
       user,
       userId,
-      jail,
       reason,
       deleteMessages,
       days,
@@ -88,6 +81,6 @@ export class DeleteUserMessages {
       return;
     }
 
-    await safeEditReply(interaction, { content: result.message || "user messages are deleted" });
+    await safeEditReply(interaction, { content: result.message || "Member jailed" });
   }
 }

@@ -84,7 +84,11 @@ export class MessagesService {
       !content ||
       !guildId ||
       !message.member?.user?.id ||
-      message.interaction?.user.bot
+      message.interaction?.user.bot ||
+      // Only interaction responses were excluded, not ordinary bot messages -
+      // so deleting one of the bot's own log embeds posted another log embed
+      // about it, and stored its content.
+      message.author?.bot
     )
       return;
 

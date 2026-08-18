@@ -114,10 +114,21 @@ export class RolesService {
       (role) => !oldRoleNames.includes(role),
     )!;
 
+    // The DB decides whether they are still supposed to be jailed. /unjail
+    // clears that row before restoring roles, so without this check the
+    // restoration looks like an escape attempt and the member is silently
+    // re-jailed by the release that was meant to free them. It only survives
+    // today because MEMBER_ROLES holds a single role, which keeps the role
+    // counts equal and trips the early return above.
+    const stillRestrictedInDb = args.memberDbRoles.some(
+      (dbRole) => dbRole.name === restrictedRoleName,
+    );
+
     // Enforce jail/voice-only persistence even when an unrelated role gets
     // added later
     if (
       hadRestrictedRole &&
+      stillRestrictedInDb &&
       newAddedRole !== JAIL &&
       newAddedRole !== VOICE_ONLY
     ) {

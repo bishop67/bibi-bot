@@ -84,9 +84,10 @@ one choice, so both are always offered and validated when the command runs.
 
 ### Administrator
 
-| Command             | Description                                | Options                    |
-| ------------------- | ------------------------------------------ | -------------------------- |
-| `/clear-warnings`   | Wipe a member's warnings                   | `user`                     |
+| Command              | Description                                | Options                    |
+| -------------------- | ------------------------------------------ | -------------------------- |
+| `!backfill-messages` | Import existing message history (prefix)   | `--reset`                  |
+| `/clear-warnings`    | Wipe a member's warnings                   | `user`                     |
 | `/logs deleted`     | Deleted message content                    | `count` (optional)         |
 | `/lookback-members` | Change the guild-wide lookback range       | `lookback`                 |
 | `/delete-member-db` | Remove a member from the database          | `user`                     |
@@ -97,6 +98,21 @@ one choice, so both are always offered and validated when the command runs.
 command per role under **Server Settings → Integrations → bibi → Command
 Permissions**, which is the better place to tune access — it takes effect
 immediately and needs no redeploy.
+
+### Levels and message history
+
+Levels count rows in `MemberMessages`, which the bot writes as it sees messages
+arrive — so on a server that existed before the bot did, everyone starts at
+zero however long they have been talking.
+
+`!backfill-messages` imports the backlog once, reading every channel the bot
+can see and storing each message's real send time so lookback windows and the
+member-flow chart stay accurate. It stores metadata only, never content. Bot
+messages and empty messages are skipped.
+
+Progress is saved per channel, so a run that is interrupted — or rate-limited
+into taking longer than you want to wait — resumes where it stopped when you
+run it again. Pass `--reset` to start from the beginning instead.
 
 ## Moderation behaviour
 

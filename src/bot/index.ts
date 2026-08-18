@@ -32,6 +32,7 @@ import "./commands/mod/lookback-members";
 import "./commands/mod/status";
 import "./commands/mod/top-warnings";
 import "./commands/mod/verify-users";
+import "./commands/mod/backfill-messages";
 import "./commands/mod/warn";
 import "./commands/mod/warnings";
 

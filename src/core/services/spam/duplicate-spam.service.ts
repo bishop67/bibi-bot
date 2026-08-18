@@ -12,6 +12,17 @@ import {
 } from "@/shared/config/spam";
 import type { UserSpamState } from "@/types";
 
+/** Above this, an attachment is identified by metadata instead of its bytes. */
+const MAX_HASH_BYTES = 2 * 1024 * 1024;
+const ATTACHMENT_FETCH_TIMEOUT_MS = 10_000;
+
+// Duplicate detection only ever compares against the previous message, so
+// state older than the spam window cannot influence a decision - it is dead
+// weight holding a copy of somebody's last message. Pruning is triggered by
+// size rather than on every message so the usual path stays O(1).
+const STATE_TTL_MS = 15 * 60 * 1000;
+const PRUNE_ABOVE = 500;
+
 export class DuplicateSpamService {
   private static userStates = new Map<string, UserSpamState>();
 
@@ -62,7 +73,10 @@ export class DuplicateSpamService {
       lastContent: content,
       lastAttachmentHashes: attachmentHashes,
       recentChannels,
+      updatedAt: now,
     });
+
+    this.pruneStaleStates(now);
 
     const shouldWarnDuplicate = count >= DUPLICATE_WARNING_THRESHOLD;
     const shouldJailDuplicate = count >= DUPLICATE_JAIL_THRESHOLD;
@@ -88,6 +102,21 @@ export class DuplicateSpamService {
     }
 
     return false;
+  }
+
+  /**
+   * Drop members not seen for a while.
+   *
+   * Without this the map only shrank when somebody was jailed, so every member
+   * who ever posted kept an entry - each holding the full text of their last
+   * message - for the lifetime of the process.
+   */
+  private static pruneStaleStates(now: number) {
+    if (this.userStates.size <= PRUNE_ABOVE) return;
+
+    for (const [userId, state] of this.userStates) {
+      if (now - state.updatedAt > STATE_TTL_MS) this.userStates.delete(userId);
+    }
   }
 
   private static async handleDuplicateSpam(
@@ -180,11 +209,39 @@ export class DuplicateSpamService {
     return true;
   }
 
+  /**
+   * Identify an attachment by its metadata rather than its bytes.
+   *
+   * Weaker - re-uploading the same file under a different name reads as
+   * different - but it costs nothing and is the only sane option for a file
+   * too big to hold in memory.
+   */
+  private static hashAttachmentMetadata(attachment: Attachment): string {
+    const baseUrl = attachment.proxyURL.split("?")[0];
+    return createHash("sha256")
+      .update(`${attachment.size}|${attachment.name}|${baseUrl}`)
+      .digest("hex")
+      .slice(0, 32);
+  }
+
   private static async hashAttachmentContent(
     attachment: Attachment,
   ): Promise<string> {
+    // Anything large is identified by metadata instead of being downloaded.
+    // checkDuplicateSpam hashes a message's attachments concurrently via
+    // Promise.all, and Discord allows uploads far larger than the headroom on
+    // a small host - so pulling the bytes in is an out-of-memory kill waiting
+    // for somebody to post a video. Spam is repeated small images, which stay
+    // under the threshold and keep exact content hashing.
+    if (attachment.size > MAX_HASH_BYTES) {
+      return this.hashAttachmentMetadata(attachment);
+    }
+
     try {
-      const response = await fetch(attachment.url);
+      // An unbounded fetch can also hang the queue on a slow CDN.
+      const response = await fetch(attachment.url, {
+        signal: AbortSignal.timeout(ATTACHMENT_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) throw new Error("Failed to fetch");
 
       const buffer = await response.arrayBuffer();
@@ -193,11 +250,7 @@ export class DuplicateSpamService {
         .digest("hex")
         .slice(0, 32);
     } catch {
-      const baseUrl = attachment.proxyURL.split("?")[0];
-      return createHash("sha256")
-        .update(`${attachment.size}|${attachment.name}|${baseUrl}`)
-        .digest("hex")
-        .slice(0, 32);
+      return this.hashAttachmentMetadata(attachment);
     }
   }
 

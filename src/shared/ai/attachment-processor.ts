@@ -20,7 +20,10 @@ export async function extractCodeFromAttachments(
     if (contentType?.startsWith("text/") || !contentType) {
       try {
         log(`Fetching code from attachment: ${name}`);
-        const response = await fetch(url);
+        // Bounded: an unresponsive CDN would otherwise stall the AI reply.
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(10_000),
+        });
 
         if (!response.ok) {
           error(`Failed to fetch ${name}: ${response.status}`);

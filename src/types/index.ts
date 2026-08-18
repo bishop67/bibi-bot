@@ -162,6 +162,8 @@ export interface UserSpamState {
   lastContent: string;
   lastAttachmentHashes: string[];
   recentChannels: Array<{ channelId: string; timestamp: number }>;
+  /** Last time this member was seen, so stale state can be evicted. */
+  updatedAt: number;
 }
 
 export interface SpamDetectionContext {

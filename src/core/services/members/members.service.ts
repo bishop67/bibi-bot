@@ -1,4 +1,5 @@
 import { simpleEmbedExample } from "@/core/embeds/simple.embed";
+import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { db } from "@/lib/db";
 import { member, memberGuild, memberRole, guild } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
@@ -393,6 +394,14 @@ export class MembersService {
     if (oldMember.user.bot) return;
 
     if (oldMember.nickname !== newMember.nickname) {
+      await ServerLogService.logNicknameChange(
+        newMember.guild,
+        newMember.id,
+        newMember.user.username,
+        oldMember.nickname ?? null,
+        newMember.nickname ?? null,
+      );
+
       const memberGuildData = await db.query.memberGuild.findFirst({
         where: and(
           eq(memberGuild.guildId, newMember.guild.id),

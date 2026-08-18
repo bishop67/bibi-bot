@@ -1,4 +1,5 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { PrivacyService } from "@/core/services/privacy/privacy.service";
@@ -120,6 +121,14 @@ export class MessagesService {
         messageId,
         guildId,
       });
+
+      await ServerLogService.logMessageDelete(
+        message,
+        content,
+        messageMemberId,
+        message.member?.user?.username ?? "Unknown User",
+        deletedByMemberId,
+      );
     } catch (_) {}
   }
 

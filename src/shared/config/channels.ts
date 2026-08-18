@@ -25,3 +25,15 @@ export const REPORT_CHANNELS =
 
 export const MOD_LOG_CHANNELS =
   process.env.MOD_LOG_CHANNELS?.split(",")?.map((s) => s.trim()) || [];
+
+// Detail logging: nickname changes, message edits and deletions. Falls back to
+// the join/leave channel so it works without extra configuration - set this
+// only if you want that traffic somewhere separate.
+const parsedServerLogChannels =
+  process.env.SERVER_LOG_CHANNELS?.split(",")
+    ?.map((s) => s.trim())
+    ?.filter(Boolean) ?? [];
+
+export const SERVER_LOG_CHANNELS = parsedServerLogChannels.length
+  ? parsedServerLogChannels
+  : JOIN_EVENT_CHANNELS;

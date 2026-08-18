@@ -176,7 +176,8 @@ filters stop at the same point.
 
 Moderation actions go to `MOD_LOG_CHANNELS` and are written to the `ModLog`
 table — the row is the record, the embed is a best-effort mirror. Kicks, bans,
-unbans and timeouts are attributed via the audit log.
+unbans and timeouts are attributed via the audit log, as are jails applied by
+handing someone the jail role directly rather than running `/jail`.
 
 Ambient events — joins, leaves, nickname changes, message edits and deletions —
 go to `SERVER_LOG_CHANNELS` (falling back to `JOIN_EVENT_CHANNELS`) and are

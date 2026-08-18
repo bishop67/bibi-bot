@@ -11,11 +11,59 @@ import {
   VOICE_ONLY,
 } from "@/shared/config/roles";
 import { ConfigValidator } from "@/shared/config/validator";
+import {
+  AuditLogEvent,
+  findAuditActor,
+} from "@/core/services/moderation/audit-log";
+import { ModLogService } from "@/core/services/moderation/modlog.service";
 import type { HandleHelperReactionParams, UpdateDbRolesArgs } from "@/types";
-import { Guild, Message, Role, TextChannel } from "discord.js";
+import {
+  Guild,
+  GuildMember,
+  Message,
+  PartialGuildMember,
+  Role,
+  TextChannel,
+} from "discord.js";
 
 export class RolesService {
   private static _helperSystemWarningLogged = false;
+
+  /**
+   * Record a jail applied by hand, rather than through /jail.
+   *
+   * The command writes the ModLog entry itself, so anyone who instead drops
+   * the jail role on a member in Discord jails them with no record at all -
+   * no moderator, no reason, nothing to review later. The role change is the
+   * only signal, and the audit log is the only thing that says who made it,
+   * which is the same way kicks and bans are already attributed.
+   *
+   * Bot-made changes are skipped: /jail, and the handler's own re-application
+   * of a jail somebody tried to remove, would otherwise log a second time for
+   * an action already recorded.
+   */
+  private static async logManualJail(
+    newMember: GuildMember | PartialGuildMember,
+  ) {
+    const actor = await findAuditActor(
+      newMember.guild,
+      AuditLogEvent.MemberRoleUpdate,
+      newMember.id,
+    );
+
+    const botId = newMember.client.user?.id;
+    if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
+
+    await ModLogService.postLog({
+      guild: newMember.guild,
+      action: "jail",
+      targetId: newMember.id,
+      targetName: newMember.user.username,
+      moderatorId: actor?.moderatorId,
+      moderatorName: actor?.moderatorName,
+      reason: actor?.reason ?? "Jail role applied manually",
+    });
+  }
   static async updateDbRoles(args: UpdateDbRolesArgs) {
     // check if new role was added
     if (
@@ -138,6 +186,10 @@ export class RolesService {
 
     // Handle JAIL or VOICE_ONLY role addition
     if (newAddedRole === JAIL || newAddedRole === VOICE_ONLY) {
+      if (newAddedRole === JAIL) {
+        await RolesService.logManualJail(args.newMember);
+      }
+
       args.newMember.roles.cache.forEach(
         (role) =>
           role.name !== newAddedRole &&

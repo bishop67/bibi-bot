@@ -120,8 +120,10 @@ export class MembersService {
     return { ...dbMember, roles: dbMemberRoles };
   }
 
+  // Accepts a partial member because guildMemberRemove often delivers one -
+  // only user and guild are read, both of which are present either way.
   static async logJoinLeaveEvents(
-    discordMember: GuildMember,
+    discordMember: GuildMember | PartialGuildMember,
     event: "join" | "leave",
   ) {
     try {

@@ -14,25 +14,42 @@ type ModelId = RawModelId extends infer T
     : never
   : never;
 
+// gemini-2.5-flash was here and is retired: it answers 404 with "no longer
+// available to new users". It still appears in ListModels, so the only way to
+// find out is to call it - which the rotation now survives either way.
 const FALLBACK_MODELS: ModelId[] = [
   "gemini-3.6-flash",
   "gemini-3.5-flash-lite",
   "gemini-3.5-flash",
   "gemini-3.1-flash-lite-preview",
   "gemini-3-flash-preview",
-  "gemini-2.5-flash",
 ];
 
-function getApiKeys() {
+/**
+ * The keys, shuffled once.
+ *
+ * This used to shuffle inside getApiKeys(), which the comment claimed happened
+ * "once at startup" but actually happened on every call - and the error path
+ * calls it to name the key that just failed. Reshuffling there meant the index
+ * pointed into a freshly reordered list, so "API key invalid" reported a key
+ * chosen at random rather than the one that broke.
+ */
+const API_KEYS: string[] = (() => {
   const keys =
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.split(",").map((k) => k.trim()) ||
-    [];
-  // Shuffle once at startup so different instances don't all hit the same key first
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.split(",")
+      .map((k) => k.trim())
+      .filter(Boolean) ?? [];
+
+  // Different instances should not all start on the same key.
   for (let i = keys.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [keys[i], keys[j]] = [keys[j], keys[i]];
   }
   return keys;
+})();
+
+function getApiKeys() {
+  return API_KEYS;
 }
 
 function createGoogleProviders() {
@@ -59,7 +76,12 @@ function getAPICallError(
 }
 
 type ErrorCategory =
-  "rate_limit" | "key_error" | "non_retryable" | "image_download" | "unknown";
+  | "rate_limit"
+  | "key_error"
+  | "model_error"
+  | "non_retryable"
+  | "image_download"
+  | "unknown";
 
 export class ImageDownloadError extends Error {
   constructor(message: string) {
@@ -102,7 +124,11 @@ function categorizeError(error: unknown): ErrorCategory {
     // HTTP status-based detection
     if (apiError.statusCode === 429) return "rate_limit";
     if (apiError.statusCode === 403) return "key_error";
-    if (apiError.statusCode === 404) return "non_retryable";
+    // A retired or misspelled model answers 404. That says nothing about the
+    // request or the key, only about this one model, so it has to fall through
+    // to the next one - as non_retryable it killed the whole call instead, and
+    // the entire fallback list below it was unreachable.
+    if (apiError.statusCode === 404) return "model_error";
     if (apiError.statusCode === 400) return "non_retryable";
 
     // Response body-based detection for ambiguous status codes
@@ -189,6 +215,7 @@ class GoogleClientRotator {
 
     do {
       const keyStartIndex = this.currentKeyIndex;
+      let modelIsDead = false;
 
       do {
         try {
@@ -230,6 +257,16 @@ class GoogleClientRotator {
             throw new ImageDownloadError(message);
           }
 
+          if (lastCategory === "model_error") {
+            // Every key will get the same answer from a model that does not
+            // exist, so there is nothing to gain by working through them.
+            botLogger.warn("Model unavailable, trying the next one", {
+              model: FALLBACK_MODELS[this.currentModelIndex],
+            });
+            modelIsDead = true;
+            break;
+          }
+
           if (lastCategory === "non_retryable") {
             botLogger.warn("Non-retryable error, stopping");
             return null;
@@ -250,7 +287,8 @@ class GoogleClientRotator {
 
       // All keys exhausted for this model
       // If last error was key_error, don't try other models (same keys will fail)
-      if (lastCategory === "key_error") {
+      // - unless the model itself is the problem, where the keys are fine.
+      if (!modelIsDead && lastCategory === "key_error") {
         botLogger.warn("All keys invalid, stopping");
         this.currentModelIndex = startModelIndex;
         this.currentKeyIndex = startKeyIndex;

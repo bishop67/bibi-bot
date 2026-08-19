@@ -4,12 +4,11 @@ import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { db } from "@/lib/db";
 import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole, guild } from "@/lib/db-schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import {
   JOIN_EVENT_CHANNELS,
   MEMBERS_COUNT_CHANNELS,
 } from "@/shared/config/channels";
-import { SHOULD_COUNT_MEMBERS } from "@/shared/config/features";
 import { ConfigValidator } from "@/shared/config/validator";
 import { generateChart } from "@/shared/utils/chart.utils";
 import { getDaysArray } from "@/shared/utils/date.utils";
@@ -34,27 +33,13 @@ export class MembersService {
     // dont add bots to the list
     if (discordMember.user.bot) return;
 
-    if (!ConfigValidator.isFeatureEnabled("SHOULD_COUNT_MEMBERS")) {
-      if (!this._memberCountWarningLogged) {
-        ConfigValidator.logFeatureDisabled(
-          "Member Count Display",
-          "SHOULD_COUNT_MEMBERS",
-        );
-        this._memberCountWarningLogged = true;
-      }
-      return;
-    }
-
-    if (!ConfigValidator.isFeatureEnabled("MEMBERS_COUNT_CHANNELS")) {
-      if (!this._memberCountWarningLogged) {
-        ConfigValidator.logFeatureDisabled(
-          "Member Count Display",
-          "MEMBERS_COUNT_CHANNELS",
-        );
-        this._memberCountWarningLogged = true;
-      }
-      return;
-    }
+    // No feature check here on purpose. This used to return early unless
+    // SHOULD_COUNT_MEMBERS and MEMBERS_COUNT_CHANNELS were both set, which are
+    // display settings for the count channel - turning that channel off also
+    // stopped every member being recorded at all. Nothing downstream expects
+    // that: the invite-link filter only moderates members holding a MemberGuild
+    // row, so switching off a cosmetic channel quietly switched off automod
+    // with it. The count channel does its own check, in updateMemberCount.
 
     // get member info
     const memberId = discordMember.id;
@@ -171,10 +156,64 @@ export class MembersService {
     } catch (_) {}
   }
 
+  /**
+   * Mark everyone the guild no longer holds as gone.
+   *
+   * guildMemberRemove is the only thing that ever set status false for one
+   * member, and it cannot fire for a departure that happens while the bot is
+   * down or disconnected - so those members stay marked present forever. The
+   * count channel reads Discord's roster and is unaffected, but anything
+   * trusting this column is not.
+   *
+   * Takes the whole roster including bots. Building it from humans alone would
+   * mark every bot in the server as departed.
+   */
+  static async markAbsentMembers(guildId: string, presentIds: string[]) {
+    // An empty roster means the fetch failed rather than that the server
+    // emptied, and acting on it would mark the entire guild gone.
+    if (!presentIds.length) return;
+
+    const result = await db
+      .update(memberGuild)
+      .set({ status: false })
+      .where(
+        and(
+          eq(memberGuild.guildId, guildId),
+          eq(memberGuild.status, true),
+          notInArray(memberGuild.memberId, presentIds),
+        ),
+      )
+      .returning({ memberId: memberGuild.memberId });
+
+    if (result.length)
+      botLogger.info("Marked members absent that left while offline", {
+        guildId,
+        count: result.length,
+      });
+  }
+
   static async updateMemberCount(
     discordMember: GuildMember | PartialGuildMember,
   ) {
-    if (discordMember.user.bot || !SHOULD_COUNT_MEMBERS) return;
+    if (discordMember.user.bot) return;
+
+    // The feature check belongs here, where the only thing it can switch off is
+    // the count channel itself.
+    if (
+      !ConfigValidator.isFeatureEnabled("SHOULD_COUNT_MEMBERS") ||
+      !ConfigValidator.isFeatureEnabled("MEMBERS_COUNT_CHANNELS")
+    ) {
+      if (!this._memberCountWarningLogged) {
+        ConfigValidator.logFeatureDisabled(
+          "Member Count Display",
+          !ConfigValidator.isFeatureEnabled("SHOULD_COUNT_MEMBERS")
+            ? "SHOULD_COUNT_MEMBERS"
+            : "MEMBERS_COUNT_CHANNELS",
+        );
+        this._memberCountWarningLogged = true;
+      }
+      return;
+    }
 
     // await member count - use cache if fetch fails due to rate limit
     try {

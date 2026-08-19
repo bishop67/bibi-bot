@@ -114,6 +114,13 @@ bot.once("clientReady", async () => {
         if (member.user.bot) continue;
         await MembersService.upsertDbMember(member, "join");
       }
+
+      // The loop above can only mark people present. Anyone who left while the
+      // bot was down fired no guildMemberRemove, so without this they stay
+      // marked present for good - which is how four departed members were
+      // still recorded as being here.
+      await MembersService.markAbsentMembers(guild.id, [...members.keys()]);
+
       botLogger.info(`Backfilled members for guild`, {
         guildId: guild.id,
         count: members.size,

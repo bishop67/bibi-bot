@@ -64,6 +64,42 @@ export class RolesService {
       reason: actor?.reason ?? "Jail role applied manually",
     });
   }
+
+  /**
+   * Record a release performed by taking the jail role off by hand.
+   *
+   * The mirror of logManualJail, and it was the half left undone: taking the
+   * role away frees the member for real - updateDbRoles drops the MemberRole
+   * row, so nothing re-applies it - yet updateStatusRoles returns early on any
+   * decrease in roles, so removal never reached a path that logs. A jail is
+   * recorded and its release is not, which reads as though the member is still
+   * jailed.
+   *
+   * Bot-made changes are skipped the same way, so /unjail does not log twice
+   * over the entry unjailUser already wrote.
+   */
+  private static async logManualUnjail(
+    newMember: GuildMember | PartialGuildMember,
+  ) {
+    const actor = await findAuditActor(
+      newMember.guild,
+      AuditLogEvent.MemberRoleUpdate,
+      newMember.id,
+    );
+
+    const botId = newMember.client.user?.id;
+    if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
+
+    await ModLogService.postLog({
+      guild: newMember.guild,
+      action: "unjail",
+      targetId: newMember.id,
+      targetName: newMember.user.username,
+      moderatorId: actor?.moderatorId,
+      moderatorName: actor?.moderatorName,
+      reason: actor?.reason ?? "Jail role removed manually",
+    });
+  }
   static async updateDbRoles(args: UpdateDbRolesArgs) {
     // check if new role was added
     if (
@@ -114,6 +150,16 @@ export class RolesService {
         .catch(() => {});
     }
     if (args.newRoles.length < args.oldRoles.length) {
+      // Tested by name against both lists rather than reading newRemovedRole
+      // below, which only ever reports the first removal - stripping the jail
+      // role alongside anything else would otherwise go unrecorded whenever
+      // the jail was not the one that happened to come first.
+      const jailReleased =
+        args.oldRoles.some((role) => role.name === JAIL) &&
+        !args.newRoles.some((role) => role.name === JAIL);
+
+      if (jailReleased) await RolesService.logManualUnjail(args.newMember);
+
       // get the removed role
       const newRemovedRole = args.oldRoles.find(
         (role) => !args.newRoles.includes(role),

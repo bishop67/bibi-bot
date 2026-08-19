@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { topStatsExampleEmbed } from "@/core/embeds/top-stats.embed";
 import { userStatsExampleEmbed } from "@/core/embeds/user-stats.embed";
 import { mapMemberGuild } from "@/shared/mappers/discord.mapper";
+import { fromDbTimestamp } from "@/shared/utils/date.utils";
 import {
   bigintToNumber,
   secondsToHours,
@@ -324,10 +325,8 @@ export class StatsService {
       userGlobalName: statsData.user.username,
       userServerName: `<@${memberId}>`,
       lookback: statsData.lookback,
-      createdAt: new Date(statsData.user.createdAt ?? Date.now()),
-      joinedAt: statsData.user.joinedAt
-        ? new Date(statsData.user.joinedAt)
-        : null,
+      createdAt: fromDbTimestamp(statsData.user.createdAt) ?? new Date(),
+      joinedAt: fromDbTimestamp(statsData.user.joinedAt),
       lookbackDaysCount: statsData.stats.messages.total,
       oneDayCount: statsData.stats.messages.last24Hours,
       sevenDaysCount: statsData.stats.messages.last7Days,

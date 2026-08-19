@@ -96,23 +96,28 @@ never once been attributed.
       rather than reading "Automod"
 - [ ] **8g** Auto-jail via 4 invite warnings → still reads "Automod"
 - [ ] **8h** `/unjail` someone jailed by a higher-ranked moderator → refused
+- [ ] **8i** Take the jail role off someone by hand → an `unjail` entry appears
+      naming you; `/unjail` still logs exactly once, not twice
+- [ ] **8j** Ban someone with "delete message history" → one bulk-delete summary
+      naming you, with the per-author counts
+- [ ] **8k** `/jail` someone with messages to sweep → bulk-delete summaries
+      appear, and their level roles still return after `/unjail` (the sweep must
+      leave `MemberMessages` alone)
 
 ## Still open
 
 Not defects, but known and unverified as of `83856b4`:
 
-- Member `856483085801095198` is jailed with no `ModLog` entry, from before
-  manual-jail logging existed. Past recovery from the audit log — decide by
-  hand whether they should stay jailed.
-- Removing the jail role by hand is an unlogged release. Role _removal_ never
-  reaches the handler that logs manual jails.
-- **Bulk deletions are invisible to logging.** There is no `messageDeleteBulk`
-  handler at all, so banning with "delete message history", and the jail sweep
-  itself, produce no deletion log entries. Single deletes are unaffected. Adding
-  one needs care on two points: it must not touch `MemberMessages` (that is what
-  lets levels return after an unjail — see the note under Priority), and a
-  fortnight-wide jail sweep would post an embed per 100-message batch, so the
-  noise level needs deciding before it ships.
-- The `/unjail` rank check reads `ModLog.moderatorId`, which was null on every
-  jail until the fix above. It therefore protects new jails only; the four
-  existing ones stay releasable by anyone.
+- Two members hold the jail role with **no `ModLog` entry at all**:
+  `856483085801095198` (`kryptos.zeta`) and `1528148852971016302`
+  (`theghost023577`). Past recovery from the audit log — decide by hand whether
+  either should stay jailed. Their jail dates cannot be read from the database:
+  `MemberRole.createdAt` tracks the last member sync, not the jail, so it says
+  nothing about when they were put away.
+- The `/unjail` rank check reads `ModLog.moderatorId`. Every jail record
+  predating the attribution fix is null, and the two members above have no
+  record at all, so the check is inert on all of them and they stay releasable
+  by anyone. It protects jails made from that fix onward.
+- Bulk-delete logging is a summary, by design: who ran it, which channel, and a
+  per-author count. Bodies are not shown and nothing is stored, because a jail
+  sweep clears a fortnight of messages a hundred at a time.

@@ -168,10 +168,27 @@ export class MembersService {
    * Takes the whole roster including bots. Building it from humans alone would
    * mark every bot in the server as departed.
    */
-  static async markAbsentMembers(guildId: string, presentIds: string[]) {
+  static async markAbsentMembers(
+    guildId: string,
+    presentIds: string[],
+    expectedCount: number,
+  ) {
     // An empty roster means the fetch failed rather than that the server
     // emptied, and acting on it would mark the entire guild gone.
     if (!presentIds.length) return;
+
+    // The dangerous input is not an empty roster but a truncated one: a fetch
+    // that returns five of seventy-two would read as sixty-seven departures and
+    // mark them all absent. guild.memberCount comes from the gateway rather
+    // than from the fetch, so it is an independent check on whether the roster
+    // actually arrived whole. Refuse rather than guess.
+    if (presentIds.length < expectedCount) {
+      botLogger.warn(
+        "Skipped the member reconciliation: the roster looks incomplete",
+        { guildId, fetched: presentIds.length, expected: expectedCount },
+      );
+      return;
+    }
 
     const result = await db
       .update(memberGuild)

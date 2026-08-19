@@ -119,7 +119,11 @@ bot.once("clientReady", async () => {
       // bot was down fired no guildMemberRemove, so without this they stay
       // marked present for good - which is how four departed members were
       // still recorded as being here.
-      await MembersService.markAbsentMembers(guild.id, [...members.keys()]);
+      await MembersService.markAbsentMembers(
+        guild.id,
+        [...members.keys()],
+        guild.memberCount,
+      );
 
       botLogger.info(`Backfilled members for guild`, {
         guildId: guild.id,

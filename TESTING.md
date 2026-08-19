@@ -117,6 +117,11 @@ thing wrong, and it was wrong low.
 - [ ] **9d** Restart the bot → the count is recomputed from the real roster
 - [ ] **9e** Several joins in quick succession → the count survives the rename
       rate limit, and any refusal shows up in the log rather than vanishing
+- [ ] **9f** Stop the bot, have someone leave, start it → they are marked absent
+      on boot, and bots still in the server are _not_ (dry-run against live data
+      flipped exactly the 4 departed humans and left `LionBot` alone)
+- [ ] **9g** Set `SHOULD_COUNT_MEMBERS=false` → members are still recorded and
+      the invite filter still moderates them; only the count channel goes quiet
 
 ## Still open
 
@@ -135,14 +140,8 @@ Not defects, but known and unverified as of `83856b4`:
 - Bulk-delete logging is a summary, by design: who ran it, which channel, and a
   per-author count. Bodies are not shown and nothing is stored, because a jail
   sweep clears a fortnight of messages a hundred at a time.
-- Five `MemberGuild` rows are marked present for members who have left, and no
-  individual departure has ever set `status` to false — every false row was
-  written by one `/verify-users` bulk reset. This is separate from the member
-  count, which reads Discord's roster rather than the database, so it does not
-  affect the channel. Running `/verify-users` corrects it; why the leave path
-  does not is unresolved.
 - Nineteen `Member` rows have no `MemberGuild` row — `xr874` (370 messages),
-  `livingofftheland_420` (160) and others, all created by the message backfill,
-  which inserts `Member` to satisfy the foreign key and nothing more. They are
-  therefore skipped by the invite-link automod, which only moderates members
-  with a guild row.
+  `livingofftheland_420` (160) and others, left by the message backfill, which
+  inserts `Member` to satisfy the foreign key and nothing more. Checked against
+  the live roster: **all nineteen have left the server**, so this is dead
+  residue rather than an automod gap. Every current member has a guild row.

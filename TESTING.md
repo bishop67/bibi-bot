@@ -122,6 +122,14 @@ thing wrong, and it was wrong low.
       flipped exactly the 4 departed humans and left `LionBot` alone)
 - [ ] **9g** Set `SHOULD_COUNT_MEMBERS=false` → members are still recorded and
       the invite filter still moderates them; only the count channel goes quiet
+- [ ] **9h** `/unjail` writes exactly one `unjail` entry, not two — the handler
+      that logs a hand-removed jail role must recognise it as already recorded
+
+The reconciliation is the only statement in this work that rewrites existing
+rows in bulk. It is `UPDATE MemberGuild SET status = false`, scoped to one
+guild, touching only rows already `true`, and it deletes nothing — the worst
+case is a wrong boolean, which `/verify-users` or a clean restart repairs. It
+refuses to run at all unless the fetched roster is at least `guild.memberCount`.
 
 ## Still open
 

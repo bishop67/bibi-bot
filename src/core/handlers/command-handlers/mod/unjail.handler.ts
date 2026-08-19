@@ -93,9 +93,13 @@ export async function executeUnjail(
     user: user ?? null,
     moderatorId: interaction.user.id,
     moderatorName: interaction.user.username,
-    reason: reason
-      ? `${reason} (released by <@${interaction.user.id}>)`
-      : `Released by <@${interaction.user.id}>`,
+    // A reason replaces the fallback rather than being appended to it. The
+    // suffix dates from before moderatorId was recorded, when the free text was
+    // the only place a moderator appeared; now that it has its own line in the
+    // embed, appending it to a real reason just said the same thing twice.
+    // The fallback still names them, because "No reason provided" on its own
+    // tells you nothing.
+    reason: reason ?? `Released by <@${interaction.user.id}>`,
   });
 
   if (!result.ok) return { success: false, error: result.message };

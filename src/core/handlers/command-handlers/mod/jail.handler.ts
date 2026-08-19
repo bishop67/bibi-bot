@@ -75,9 +75,11 @@ export async function executeJail(
     days,
     moderatorId: interaction.user.id,
     moderatorName: interaction.user.username,
-    reason: reason
-      ? `${reason} (triggered by <@${interaction.user.id}>)`
-      : `Manual moderation (triggered by <@${interaction.user.id}>)`,
+    // Same rule as /unjail: a reason stands on its own, and only the fallback
+    // names the moderator. Appending them to a stated reason repeated the
+    // Moderator line of the log embed, and the reason is shown to the member in
+    // the jail channel too, where the suffix read oddly.
+    reason: reason ?? `Jailed by <@${interaction.user.id}>`,
   };
 
   // Deliberately not marked `automated`, so a moderator can still jail a

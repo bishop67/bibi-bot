@@ -1,17 +1,22 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { isLogExempt } from "@/core/services/logging/log-exempt";
 import { ServerLogService } from "@/core/services/logging/server-log.service";
+import { findMessageDeleteActor } from "@/core/services/moderation/audit-log";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { isStaffMember } from "@/shared/config/staff";
+import { botLogger } from "@/lib/telemetry";
 import { db } from "@/lib/db";
-import { memberMessages, memberDeletedMessages, memberGuild } from "@/lib/db-schema";
+import {
+  memberMessages,
+  memberDeletedMessages,
+  memberGuild,
+} from "@/lib/db-schema";
 import { and, count, eq } from "drizzle-orm";
 import { LEVEL_LIST, LEVEL_MESSAGES } from "@/shared/config/levels";
 import { JAIL, VOICE_ONLY } from "@/shared/config/roles";
 import { ConfigValidator } from "@/shared/config/validator";
 import {
-  AuditLogEvent,
   Collection,
   FetchMessagesOptions,
   GuildTextBasedChannel,
@@ -38,7 +43,8 @@ export class MessagesService {
 
     // catch message edits
     try {
-      await db.insert(memberMessages)
+      await db
+        .insert(memberMessages)
         .values({ id: messageId, channelId, guildId, memberId, messageId })
         .onConflictDoUpdate({
           target: memberMessages.messageId,
@@ -53,7 +59,8 @@ export class MessagesService {
     if (!messageId) return;
 
     try {
-      await db.delete(memberMessages)
+      await db
+        .delete(memberMessages)
         .where(eq(memberMessages.messageId, messageId));
     } catch (_) {}
   }
@@ -75,12 +82,11 @@ export class MessagesService {
     const content = message.content;
     const channelId = message.channelId;
     const messageId = message.id;
-    const guildId = message.guild?.id;
+    const guild = message.guild;
 
     if (
-      !content ||
-      !guildId ||
-      !message.member?.user?.id ||
+      !guild ||
+      !channelId ||
       message.interaction?.user.bot ||
       // Only interaction responses were excluded, not ordinary bot messages -
       // so deleting one of the bot's own log embeds posted another log embed
@@ -94,47 +100,63 @@ export class MessagesService {
     // meant to close.
     if (isLogExempt(message.channel)) return;
 
-    const messageMemberId = message.member?.user?.id;
-    let deletedByMemberId = messageMemberId;
+    // Only the newest messages per channel are cached, and a moderator is
+    // usually deleting something older than that - so in exactly the case worth
+    // logging, the author arrives unknown and has to come from the audit entry
+    // instead.
+    const author = message.author ?? message.member?.user ?? null;
+
+    const actor = await findMessageDeleteActor(
+      guild,
+      channelId,
+      author?.id ?? null,
+    );
+
+    // The bot check above only sees a cached message; for an uncached one the
+    // audit entry is the first thing that says the author was a bot.
+    if (!author && actor?.authorIsBot) return;
+
+    const messageMemberId = author?.id ?? actor?.authorId;
+    const deletedByMemberId = actor?.executorId ?? messageMemberId;
+
+    // A partial message tells us nothing and no audit entry claims it: an
+    // uncached self-delete, with no author, no content and nobody to name.
+    if (!messageMemberId || !deletedByMemberId) return;
+
+    // The log post is what the moderator actually sees, so it goes first and
+    // stands on its own. It used to sit behind the audit fetch and the insert
+    // inside one try/catch, which meant a missing View Audit Log permission, a
+    // foreign key the moderator did not satisfy, or any database hiccup
+    // silently swallowed the log entry as well.
+    await ServerLogService.logMessageDelete(
+      message,
+      content,
+      author,
+      messageMemberId,
+      deletedByMemberId,
+    );
+
+    // The history table's content column is NOT NULL, so an uncached message
+    // has nothing to store - that is a gap in /log-deleted-messages-history
+    // only, not in the channel log above.
+    if (!content) return;
 
     try {
-      const auditLogs = await message.guild.fetchAuditLogs({
-        type: AuditLogEvent.MessageDelete,
-        limit: 1,
-      });
-      const deleteLog = auditLogs.entries.first();
-
-      if (deleteLog) {
-        const { executor, target, extra, createdTimestamp } = deleteLog;
-
-        const timeDiff = Date.now() - createdTimestamp;
-
-        if (
-          timeDiff < 5000 &&
-          (extra?.count ?? 0) >= 1 &&
-          target?.id === messageMemberId
-        ) {
-          deletedByMemberId = executor?.id ?? messageMemberId;
-        }
-      }
-
       await db.insert(memberDeletedMessages).values({
         content,
         deletedByMemberId,
         messageMemberId,
         channelId,
         messageId,
-        guildId,
+        guildId: guild.id,
       });
-
-      await ServerLogService.logMessageDelete(
-        message,
-        content,
-        message.member?.user ?? null,
-        messageMemberId,
-        deletedByMemberId,
-      );
-    } catch (_) {}
+    } catch (e) {
+      botLogger.error("Could not store a deleted message", {
+        guildId: guild.id,
+        messageId,
+        error: String(e),
+      });
+    }
   }
 
   static async levelUpMessage(message: Message<boolean>) {
@@ -175,7 +197,7 @@ export class MessagesService {
         and(
           eq(memberMessages.memberId, message.member?.id ?? ""),
           eq(memberMessages.guildId, message.guild?.id ?? ""),
-        )
+        ),
       );
 
     const memberMessagesCount = result?.count ?? 0;

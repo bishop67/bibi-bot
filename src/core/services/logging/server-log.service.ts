@@ -117,7 +117,7 @@ export class ServerLogService {
 
   static async logMessageDelete(
     message: Message<boolean> | PartialMessage,
-    content: string,
+    content: string | null,
     author: User | null,
     authorId: string,
     deletedById: string,
@@ -139,7 +139,12 @@ export class ServerLogService {
           `<@${authorId}> · deleted by ${
             deletedById === authorId ? "*themselves*" : `<@${deletedById}>`
           }`,
-          quote(content),
+          // Only the newest messages per channel are cached, so a moderator
+          // clearing something older leaves us the fact of the deletion but not
+          // its text. Saying so beats staying silent about the deletion.
+          content === null || content === undefined
+            ? "*(not cached - the bot did not have the message text)*"
+            : quote(content),
         ],
         footer: "message deleted",
       }),

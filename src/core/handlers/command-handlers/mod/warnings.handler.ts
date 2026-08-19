@@ -52,13 +52,22 @@ export async function executeWarnings(
   }
 
   const embed = simpleEmbedExample();
+
+  // Labelled "ID", not "#". /delete-warning and /edit-warning both ask for a
+  // warning ID and point at this list to find it, and "#1" reads as the first
+  // row rather than as the number to type - which is exactly how it was read.
+  // The value is the same either way; only the label was ambiguous.
   embed.description = warnings
     .map(
       (w) =>
-        `**#${w.id}** - ${w.reason}\n` +
+        `**ID \`${w.id}\`** — ${w.reason}\n` +
         `by ${w.moderator?.username ?? "automod"} • <t:${Math.floor((fromDbTimestamp(w.createdAt)?.getTime() ?? Date.now()) / 1000)}:R>`,
     )
     .join("\n\n");
+
+  // Only a moderator can act on these, so only they are told how.
+  if (!isSelf)
+    embed.description += `\n\n-# Use \`/delete-warning\` or \`/edit-warning\` with the ID above.`;
   embed.footer!.text = `${targetName} • ${total} warning${total === 1 ? "" : "s"} • page ${Math.max(1, page)}/${totalPages}`;
 
   return { embed };

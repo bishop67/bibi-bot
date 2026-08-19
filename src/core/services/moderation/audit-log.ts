@@ -205,4 +205,75 @@ export async function findMessageDeleteActor(
   }
 }
 
+/**
+ * Who bulk-deleted messages from a channel.
+ *
+ * A separate lookup from findMessageDeleteActor because Discord shapes the two
+ * events differently: a bulk entry's target is the channel rather than an
+ * author, and its extra carries only a count. There is no author to match on,
+ * so the channel and recency are all there is to correlate with.
+ *
+ * Returns null when nothing matches, which includes the bot's own sweeps if
+ * the caller would rather not name them.
+ */
+export async function findBulkDeleteExecutor(
+  guild: Guild,
+  channelId: string,
+): Promise<string | null> {
+  if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+    botLogger.warn(
+      "Cannot read the audit log: missing View Audit Log. Bulk deletions will be logged without naming who ran them",
+      { guildId: guild.id },
+    );
+    return null;
+  }
+
+  const attempt = async (): Promise<string | null> => {
+    const logs = await guild.fetchAuditLogs({
+      type: AuditLogEvent.MessageBulkDelete,
+      limit: 10,
+    });
+
+    for (const entry of logs.entries.values()) {
+      if (entry.targetId !== channelId || !entry.executor) continue;
+
+      const count = entry.extra?.count ?? 0;
+      const seen = messageDeleteCounts.get(entry.id);
+
+      // Same accounting as single deletes: one entry can cover more than one
+      // sweep of the same channel, so count them off rather than matching the
+      // entry once and calling it spent.
+      if (seen !== undefined && count <= seen) continue;
+
+      if (
+        seen === undefined &&
+        Date.now() - entry.createdTimestamp > MAX_ENTRY_AGE_MS
+      ) {
+        messageDeleteCounts.set(entry.id, count);
+        continue;
+      }
+
+      messageDeleteCounts.set(entry.id, count);
+      return entry.executor.id;
+    }
+
+    return null;
+  };
+
+  try {
+    const first = await attempt();
+    if (first) return first;
+
+    await wait(RETRY_DELAY_MS);
+    return await attempt();
+  } catch (e) {
+    botLogger.error("Bulk delete audit lookup failed", {
+      guildId: guild.id,
+      channelId,
+      error: String(e),
+    });
+    return null;
+  }
+}
+
 export { AuditLogEvent };

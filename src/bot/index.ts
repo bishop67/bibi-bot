@@ -8,6 +8,7 @@ import "./events/guild-member-remove";
 import "./events/guild-member-update";
 import "./events/message-create";
 import "./events/message-delete";
+import "./events/message-delete-bulk";
 import "./events/message-reaction-add";
 import "./events/message-update";
 import "./events/presence-update";

@@ -1,9 +1,11 @@
 import { logEmbed } from "@/core/embeds/log.embed";
 import { isLogExempt } from "@/core/services/logging/log-exempt";
 import { SERVER_LOG_CHANNELS } from "@/shared/config/channels";
+import type { ReadonlyCollection } from "@discordjs/collection";
 import type {
   APIEmbed,
   Guild,
+  GuildTextBasedChannel,
   Message,
   PartialMessage,
   TextChannel,
@@ -111,6 +113,65 @@ export class ServerLogService {
           quote(message.content),
         ],
         footer: "message edited",
+      }),
+    );
+  }
+
+  /**
+   * A bulk deletion - a ban that cleared message history, or a jail sweep.
+   *
+   * Summarised rather than itemised. Discord bulk-deletes up to a hundred
+   * messages at a time and a jail clears a fortnight of them, so one entry per
+   * message would bury the channel and blow past the embed limit besides. The
+   * bodies are deliberately left out for the same reason, and because these
+   * sweeps are not stored anywhere - what makes the entry useful is who ran
+   * it, where, and against whom.
+   */
+  static async logMessageBulkDelete(
+    guild: Guild,
+    channel: GuildTextBasedChannel,
+    messages: ReadonlyCollection<string, Message<boolean> | PartialMessage>,
+    deletedById: string | null,
+  ): Promise<void> {
+    if (isLogExempt(channel)) return;
+
+    // Uncached messages carry no author, so this counts whoever can be named
+    // and says plainly how many could not be.
+    const byAuthor = new Map<string, number>();
+    let unknown = 0;
+
+    for (const message of messages.values()) {
+      const authorId = message.author?.id;
+      if (!authorId) {
+        unknown += 1;
+        continue;
+      }
+      byAuthor.set(authorId, (byAuthor.get(authorId) ?? 0) + 1);
+    }
+
+    const ranked = [...byAuthor.entries()].sort((a, b) => b[1] - a[1]);
+    const shown = ranked.slice(0, 10);
+    const remaining = ranked.length - shown.length;
+
+    const authorLines = shown.map(
+      ([authorId, count]) => `<@${authorId}> — ${count}`,
+    );
+
+    if (remaining > 0) authorLines.push(`*and ${remaining} other author(s)*`);
+
+    if (unknown > 0)
+      authorLines.push(`*${unknown} from uncached messages, author unknown*`);
+
+    await this.post(
+      guild,
+      logEmbed({
+        tone: "negative",
+        title: `${messages.size} messages bulk deleted in #${channel.name}`,
+        lines: [
+          deletedById ? `Deleted by <@${deletedById}>` : "Deleted by *unknown*",
+          ...authorLines,
+        ],
+        footer: "bulk delete",
       }),
     );
   }

@@ -2,6 +2,7 @@ import "@dotenvx/dotenvx/config";
 
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
+import { MessagesService } from "@/core/services/messages/messages.service";
 import { migrationsReady } from "@/lib/db";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
 import {
@@ -132,6 +133,18 @@ bot.once("clientReady", async () => {
 
       const firstMember = members.first();
       if (firstMember) await MembersService.updateMemberCount(firstMember);
+
+      // Deliberately not awaited. Nothing depends on it and it competes with
+      // nothing; the point is only that the cache stops being empty sooner
+      // than the next message would manage on its own.
+      MessagesService.warmMessageCache(guild)
+        .then((warmed) =>
+          botLogger.info("Warmed the message cache", {
+            guildId: guild.id,
+            messages: warmed,
+          }),
+        )
+        .catch(() => {});
     }),
   );
 

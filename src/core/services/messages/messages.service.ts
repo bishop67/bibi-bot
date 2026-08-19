@@ -19,12 +19,20 @@ import { ConfigValidator } from "@/shared/config/validator";
 import {
   Collection,
   FetchMessagesOptions,
+  Guild,
   GuildTextBasedChannel,
   Message,
   PartialMessage,
   RESTJSONErrorCodes,
   TextChannel,
 } from "discord.js";
+
+/**
+ * How many messages to pull per channel at startup. Matched to the
+ * MessageManager cache cap in main.ts - fetching more would just evict what it
+ * had already fetched, so the two numbers have to move together.
+ */
+const MESSAGE_CACHE_WARM_LIMIT = 50;
 
 export class MessagesService {
   private static _levelSystemWarningLogged = false;
@@ -230,6 +238,45 @@ export class MessagesService {
         }
       }
     }
+  }
+
+  /**
+   * Fill the message cache from history at startup.
+   *
+   * discord.js starts with an empty message cache and only fills it from new
+   * messages, never backwards. So after a restart the bot holds no text for
+   * anything already posted, and a deletion logs "not cached" no matter how
+   * recent the message was - which is most of them on a quiet server.
+   *
+   * Fetching is what closes that. It costs one request per channel and no extra
+   * memory: MessageManager is capped at 50 per channel either way, so this only
+   * fills a budget that was already reserved and would otherwise sit empty for
+   * hours.
+   *
+   * Failures are per-channel and ignored. A channel the bot cannot read is
+   * normal, and none of this is worth delaying startup over.
+   */
+  static async warmMessageCache(guild: Guild): Promise<number> {
+    const channels = guild.channels.cache.filter(
+      (channel): channel is GuildTextBasedChannel =>
+        channel.isTextBased() &&
+        !channel.isVoiceBased() &&
+        channel.viewable !== false,
+    );
+
+    let warmed = 0;
+
+    // Sequential on purpose. This is startup housekeeping competing with the
+    // member backfill for the same rate limit, and nothing is waiting on it.
+    for (const channel of channels.values()) {
+      const fetched = await channel.messages
+        .fetch({ limit: MESSAGE_CACHE_WARM_LIMIT })
+        .catch(() => null);
+
+      if (fetched) warmed += fetched.size;
+    }
+
+    return warmed;
   }
 
   // Fetch messages utility

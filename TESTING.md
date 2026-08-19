@@ -104,6 +104,20 @@ never once been attributed.
       appear, and their level roles still return after `/unjail` (the sweep must
       leave `MemberMessages` alone)
 
+## 9. Member count
+
+Verified 2026-08-19: the `members:` channel read 66 against 67 real humans, and
+every current member had a correct `MemberGuild` row — the count was the only
+thing wrong, and it was wrong low.
+
+- [ ] **9a** A new member joins and completes onboarding → the count goes up
+- [ ] **9b** A member still behind the screening gate → count unchanged until
+      they pass it, not before
+- [ ] **9c** A member leaves → the count goes down
+- [ ] **9d** Restart the bot → the count is recomputed from the real roster
+- [ ] **9e** Several joins in quick succession → the count survives the rename
+      rate limit, and any refusal shows up in the log rather than vanishing
+
 ## Still open
 
 Not defects, but known and unverified as of `83856b4`:
@@ -121,3 +135,14 @@ Not defects, but known and unverified as of `83856b4`:
 - Bulk-delete logging is a summary, by design: who ran it, which channel, and a
   per-author count. Bodies are not shown and nothing is stored, because a jail
   sweep clears a fortnight of messages a hundred at a time.
+- Five `MemberGuild` rows are marked present for members who have left, and no
+  individual departure has ever set `status` to false — every false row was
+  written by one `/verify-users` bulk reset. This is separate from the member
+  count, which reads Discord's roster rather than the database, so it does not
+  affect the channel. Running `/verify-users` corrects it; why the leave path
+  does not is unresolved.
+- Nineteen `Member` rows have no `MemberGuild` row — `xr874` (370 messages),
+  `livingofftheland_420` (160) and others, all created by the message backfill,
+  which inserts `Member` to satisfy the foreign key and nothing more. They are
+  therefore skipped by the invite-link automod, which only moderates members
+  with a guild row.

@@ -32,15 +32,52 @@ import {
 } from "discord.js";
 
 /**
- * How recently a release must already be recorded for this handler to treat it
- * as the same one. Wide enough to cover unjailUser writing its entry and the
- * role change reaching the gateway, narrow enough that a genuine second release
- * minutes later still gets its own row.
+ * How recently the same action must already be recorded for these handlers to
+ * treat it as the one already logged. Wide enough to cover the command writing
+ * its entry and the role change reaching the gateway, narrow enough that a
+ * genuine second jail or release minutes later still gets its own row.
  */
-const DUPLICATE_RELEASE_WINDOW_SECONDS = 15;
+const DUPLICATE_ACTION_WINDOW_SECONDS = 15;
 
 export class RolesService {
   private static _helperSystemWarningLogged = false;
+
+  /**
+   * Whether this action was already recorded for this member moments ago.
+   *
+   * Both handlers below skip bot-made role changes by matching the audit
+   * executor, which only works when the entry is found. When the lookup comes
+   * back empty - the log lagging past the retry, or the permission gone - the
+   * command's own entry is invisible to them and they write a second one, with
+   * no moderator, for an action already recorded.
+   *
+   * The window is computed in SQL. ModLog.createdAt is `timestamp without time
+   * zone` defaulting to CURRENT_TIMESTAMP, so it carries no offset; handing it
+   * an ISO string ending in Z compares as though every row were recent, at any
+   * window width, which suppresses the log entirely instead of deduplicating
+   * it. Taking both sides from the database clock also removes any skew between
+   * this process and Postgres.
+   */
+  private static async alreadyLoggedRecently(
+    guildId: string,
+    targetId: string,
+    action: "jail" | "unjail",
+  ): Promise<boolean> {
+    const [recent] = await db
+      .select({ id: modLog.id })
+      .from(modLog)
+      .where(
+        and(
+          eq(modLog.guildId, guildId),
+          eq(modLog.targetId, targetId),
+          eq(modLog.action, action),
+          sql`${modLog.createdAt} > (now() at time zone 'utc') - make_interval(secs => ${DUPLICATE_ACTION_WINDOW_SECONDS})`,
+        ),
+      )
+      .limit(1);
+
+    return Boolean(recent);
+  }
 
   /**
    * Record a jail applied by hand, rather than through /jail.
@@ -66,6 +103,15 @@ export class RolesService {
 
     const botId = newMember.client.user?.id;
     if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
+
+    if (
+      await RolesService.alreadyLoggedRecently(
+        newMember.guild.id,
+        newMember.id,
+        "jail",
+      )
+    )
+      return;
 
     await ModLogService.postLog({
       guild: newMember.guild,
@@ -103,32 +149,14 @@ export class RolesService {
     const botId = newMember.client.user?.id;
     if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
 
-    // The executor check above only fires when the audit entry is actually
-    // found. If the lookup comes back empty - the log lags past the retry, or
-    // the permission is gone - a release performed by /unjail would be recorded
-    // a second time here, with no moderator, on top of the entry unjailUser
-    // already wrote. So a release logged moments ago is taken as that entry
-    // rather than a new one.
-    // The window is computed in SQL, not here. ModLog.createdAt is `timestamp
-    // without time zone` and defaults to CURRENT_TIMESTAMP, so it carries no
-    // offset; handing it an ISO string ending in Z compares as though every row
-    // were recent, which matched everything and would have suppressed this log
-    // for good. Deriving both sides from the database clock also removes any
-    // skew between this process and Postgres.
-    const [recent] = await db
-      .select({ id: modLog.id })
-      .from(modLog)
-      .where(
-        and(
-          eq(modLog.guildId, newMember.guild.id),
-          eq(modLog.targetId, newMember.id),
-          eq(modLog.action, "unjail"),
-          sql`${modLog.createdAt} > (now() at time zone 'utc') - make_interval(secs => ${DUPLICATE_RELEASE_WINDOW_SECONDS})`,
-        ),
+    if (
+      await RolesService.alreadyLoggedRecently(
+        newMember.guild.id,
+        newMember.id,
+        "unjail",
       )
-      .limit(1);
-
-    if (recent) return;
+    )
+      return;
 
     await ModLogService.postLog({
       guild: newMember.guild,

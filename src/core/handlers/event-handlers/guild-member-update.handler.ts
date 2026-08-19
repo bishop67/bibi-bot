@@ -52,6 +52,16 @@ export async function handleGuildMemberUpdate(
 
   MembersService.updateNickname(oldMember, newMember);
 
+  // Membership screening makes every member arrive pending, and the join
+  // handler defers the count and the restore until they are through the gate.
+  // Nothing ever picked that up, so in a guild with screening enabled - this
+  // one has MEMBER_VERIFICATION_GATE_ENABLED - no join was ever counted while
+  // every departure was, and the member count could only fall.
+  if (oldMember.pending && !newMember.pending) {
+    await MembersService.updateMemberCount(newMember);
+    await MembersService.joinSettings(newMember);
+  }
+
   await logTimeoutChange(oldMember, newMember);
 
   MemberUpdateQueueService.queueMemberUpdate(newMember.id, newMember.guild.id);

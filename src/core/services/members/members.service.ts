@@ -2,6 +2,7 @@ import { logEmbed } from "@/core/embeds/log.embed";
 import { simpleEmbedExample } from "@/core/embeds/simple.embed";
 import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { db } from "@/lib/db";
+import { botLogger } from "@/lib/telemetry";
 import { member, memberGuild, memberRole, guild } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
 import {
@@ -196,10 +197,25 @@ export class MembersService {
         (m) => !m.user.bot,
       ).size;
 
-      // set channel name as member count
+      const nextName = `${channelName} ${memberCount}`;
+
+      // Discord allows two channel renames per ten minutes. Spending one of
+      // them writing the name it already has means a real change minutes later
+      // is the one that gets refused, so an unchanged count is left alone.
+      if (memberCountChannel.name === nextName) continue;
+
       try {
-        await memberCountChannel.setName(`${channelName} ${memberCount}`);
-      } catch (_) {}
+        await memberCountChannel.setName(nextName);
+      } catch (e) {
+        // Swallowing this left the count silently stale with nothing anywhere
+        // to say the rename had been refused.
+        botLogger.warn("Could not update the member count channel", {
+          guildId: discordMember.guild.id,
+          channel: memberCountChannel.name,
+          wanted: nextName,
+          error: String(e),
+        });
+      }
     }
   }
 

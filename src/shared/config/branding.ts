@@ -21,7 +21,6 @@ export function getThreadWelcomeMessage(
   threadId: string,
   threadName: string,
 ): string {
-
   switch (boardType) {
     case "job-board":
       return `Good luck finding the right candidate! :four_leaf_clover:`;

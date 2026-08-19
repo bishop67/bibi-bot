@@ -3,7 +3,10 @@ import {
   extractImageUrls,
 } from "@/shared/ai/attachment-processor";
 import { CHAT_SYSTEM_PROMPT } from "@/shared/ai/prompts";
-import { googleClient, ImageDownloadError } from "@/shared/integrations/google-ai";
+import {
+  googleClient,
+  ImageDownloadError,
+} from "@/shared/integrations/google-ai";
 import { botLogger } from "@/lib/telemetry";
 import { generateText, ModelMessage, stepCountIs } from "ai";
 import { Message } from "discord.js";
@@ -155,14 +158,12 @@ export class AiChatService {
         const content = Array.isArray(msg.content)
           ? msg.content
               .filter(
-                (p): p is { type: "text"; text: string } =>
-                  p.type === "text",
+                (p): p is { type: "text"; text: string } => p.type === "text",
               )
               .map((p) => p.text)
               .join(" ")
           : msg.content;
-        const prefix =
-          msg.role === "assistant" ? "[Bot]: " : "";
+        const prefix = msg.role === "assistant" ? "[Bot]: " : "";
         return `${prefix}${content}`;
       })
       .join("\n");

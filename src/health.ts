@@ -84,7 +84,9 @@ export const healthServer = createServer(async (req, res) => {
     // 503 rather than a cheerful 200 when the gateway is down: a bot that
     // cannot receive a message is not healthy, and a monitor checking only for
     // a response would never notice.
-    res.writeHead(result.ok ? 200 : 503, { "content-type": "application/json" });
+    res.writeHead(result.ok ? 200 : 503, {
+      "content-type": "application/json",
+    });
     res.end(JSON.stringify(result.body));
   } catch (e) {
     res.writeHead(500, { "content-type": "application/json" });

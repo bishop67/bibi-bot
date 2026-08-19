@@ -33,7 +33,9 @@ export async function executeWarnings(
 
   if (total === 0) {
     return {
-      error: isSelf ? "You have no warnings." : `${target.username} has no warnings.`,
+      error: isSelf
+        ? "You have no warnings."
+        : `${target.username} has no warnings.`,
     };
   }
 

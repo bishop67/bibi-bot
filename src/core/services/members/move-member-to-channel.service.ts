@@ -7,12 +7,13 @@ type MemberGuildRow = InferSelectModel<typeof memberGuild>;
 
 export class MoveMemberToChannelService {
   static async moveMemberToChannel(member: GuildMember): Promise<void> {
-    let guildMemberDb: MemberGuildRow | undefined = await db.query.memberGuild.findFirst({
-      where: and(
-        eq(memberGuild.guildId, member.guild.id),
-        eq(memberGuild.memberId, member.id),
-      ),
-    });
+    let guildMemberDb: MemberGuildRow | undefined =
+      await db.query.memberGuild.findFirst({
+        where: and(
+          eq(memberGuild.guildId, member.guild.id),
+          eq(memberGuild.memberId, member.id),
+        ),
+      });
 
     let count = guildMemberDb?.moveCounter || 0;
 
@@ -53,7 +54,8 @@ export class MoveMemberToChannelService {
     }
 
     const exit = async () => {
-      await db.update(memberGuild)
+      await db
+        .update(memberGuild)
         .set({ moving: false })
         .where(eq(memberGuild.id, guildMemberDb!.id));
 
@@ -102,7 +104,8 @@ export class MoveMemberToChannelService {
           await guildMember.voice.setChannel(randomChannel);
           if (!guildMemberDb) break;
           const dbId = guildMemberDb.id;
-          const [updatedRow] = await db.update(memberGuild)
+          const [updatedRow] = await db
+            .update(memberGuild)
             .set({ moveCounter: count - 1, moving: true })
             .where(eq(memberGuild.id, dbId))
             .returning();

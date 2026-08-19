@@ -2,7 +2,11 @@ import { executeAuditRoles } from "@/core/handlers/command-handlers/admin/audit-
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
-import { MessageFlags, PermissionFlagsBits, type CommandInteraction } from "discord.js";
+import {
+  MessageFlags,
+  PermissionFlagsBits,
+  type CommandInteraction,
+} from "discord.js";
 import { Discord, Slash } from "discordx";
 
 @Discord()
@@ -14,7 +18,10 @@ export class AuditRoles {
     dmPermission: false,
   })
   async auditRoles(interaction: CommandInteraction) {
-    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))) return;
+    if (
+      !(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))
+    )
+      return;
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)
         .values({

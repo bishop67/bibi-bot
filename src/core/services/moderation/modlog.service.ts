@@ -115,7 +115,10 @@ export class ModLogService {
 
       if (!ConfigValidator.isFeatureEnabled("MOD_LOG_CHANNELS")) {
         if (!this._warningLogged) {
-          ConfigValidator.logFeatureDisabled("Moderation Log", "MOD_LOG_CHANNELS");
+          ConfigValidator.logFeatureDisabled(
+            "Moderation Log",
+            "MOD_LOG_CHANNELS",
+          );
           this._warningLogged = true;
         }
       } else {

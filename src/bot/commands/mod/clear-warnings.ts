@@ -30,7 +30,10 @@ export class ClearWarnings {
       return;
 
     if (!interaction.guildId) {
-      return safeEditReply(interaction, "This command can only be used in a server");
+      return safeEditReply(
+        interaction,
+        "This command can only be used in a server",
+      );
     }
 
     if (interaction.member?.user.id) {

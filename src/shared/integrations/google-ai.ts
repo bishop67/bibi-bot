@@ -1,7 +1,7 @@
 import { botLogger } from "@/lib/telemetry";
 import {
   createGoogleGenerativeAI,
-  type GoogleGenerativeAIProvider
+  type GoogleGenerativeAIProvider,
 } from "@ai-sdk/google";
 import { APICallError, RetryError } from "ai";
 
@@ -20,7 +20,7 @@ const FALLBACK_MODELS: ModelId[] = [
   "gemini-3.5-flash",
   "gemini-3.1-flash-lite-preview",
   "gemini-3-flash-preview",
-  "gemini-2.5-flash"
+  "gemini-2.5-flash",
 ];
 
 function getApiKeys() {
@@ -46,7 +46,7 @@ function maskApiKey(key: string): string {
 }
 
 function getAPICallError(
-  error: unknown
+  error: unknown,
 ): InstanceType<typeof APICallError> | null {
   if (APICallError.isInstance(error)) return error;
   if (
@@ -59,11 +59,7 @@ function getAPICallError(
 }
 
 type ErrorCategory =
-  | "rate_limit"
-  | "key_error"
-  | "non_retryable"
-  | "image_download"
-  | "unknown";
+  "rate_limit" | "key_error" | "non_retryable" | "image_download" | "unknown";
 
 export class ImageDownloadError extends Error {
   constructor(message: string) {
@@ -151,7 +147,7 @@ class GoogleClientRotator {
       this.currentKeyIndex = (this.currentKeyIndex + 1) % this.providers.length;
       botLogger.info("Rotated API key", {
         keyIndex: this.currentKeyIndex + 1,
-        totalKeys: this.providers.length
+        totalKeys: this.providers.length,
       });
     }
   }
@@ -163,7 +159,7 @@ class GoogleClientRotator {
       botLogger.info("Rotated model", {
         model: FALLBACK_MODELS[this.currentModelIndex],
         modelIndex: this.currentModelIndex + 1,
-        totalModels: FALLBACK_MODELS.length
+        totalModels: FALLBACK_MODELS.length,
       });
       return true;
     }
@@ -172,8 +168,8 @@ class GoogleClientRotator {
 
   async executeWithRotation<T>(
     operation: (
-      model: ReturnType<GoogleClientRotator["getModel"]>
-    ) => Promise<T>
+      model: ReturnType<GoogleClientRotator["getModel"]>,
+    ) => Promise<T>,
   ): Promise<T | null> {
     if (this.providers.length === 0) {
       botLogger.error("No API keys configured");
@@ -188,7 +184,7 @@ class GoogleClientRotator {
     botLogger.info("Starting AI request", {
       model: FALLBACK_MODELS[this.currentModelIndex],
       keyIndex: this.currentKeyIndex + 1,
-      totalKeys: this.providers.length
+      totalKeys: this.providers.length,
     });
 
     do {
@@ -205,13 +201,13 @@ class GoogleClientRotator {
               : !!result;
           if (!hasContent) {
             botLogger.warn("Empty response, rotating", {
-              model: FALLBACK_MODELS[this.currentModelIndex]
+              model: FALLBACK_MODELS[this.currentModelIndex],
             });
             this.rotateKey();
             continue;
           }
           botLogger.info("AI request succeeded", {
-            model: FALLBACK_MODELS[this.currentModelIndex]
+            model: FALLBACK_MODELS[this.currentModelIndex],
           });
           return result;
         } catch (error) {
@@ -224,12 +220,12 @@ class GoogleClientRotator {
             model: FALLBACK_MODELS[this.currentModelIndex],
             keyIndex: this.currentKeyIndex + 1,
             category: lastCategory,
-            message
+            message,
           });
 
           if (lastCategory === "image_download") {
             botLogger.warn(
-              "Image download failed, caller should retry without images"
+              "Image download failed, caller should retry without images",
             );
             throw new ImageDownloadError(message);
           }
@@ -243,7 +239,7 @@ class GoogleClientRotator {
             const expiredKey = getApiKeys()[this.currentKeyIndex];
             if (expiredKey) {
               botLogger.warn("API key invalid", {
-                key: maskApiKey(expiredKey)
+                key: maskApiKey(expiredKey),
               });
             }
           }
@@ -272,7 +268,7 @@ class GoogleClientRotator {
 
     botLogger.warn("All models and keys exhausted", {
       totalModels: FALLBACK_MODELS.length,
-      totalKeys: this.providers.length
+      totalKeys: this.providers.length,
     });
     const finalMessage =
       lastError instanceof Error ? lastError.message : String(lastError);

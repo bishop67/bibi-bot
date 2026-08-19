@@ -199,7 +199,7 @@ const JOB_BOARD_TEMPLATE_FIELDS = [
   "Budget Range",
   "Timeline",
   "Contact Method",
-  "Additional Details"
+  "Additional Details",
 ] as const;
 
 const DEV_BOARD_TEMPLATE_FIELDS = [
@@ -209,32 +209,32 @@ const DEV_BOARD_TEMPLATE_FIELDS = [
   "Rate/Hour",
   "Portfolio Link",
   "Contact Method",
-  "Previous Projects/Examples"
+  "Previous Projects/Examples",
 ] as const;
 
 const SHOWCASE_TEMPLATE_FIELDS = [
   "Project Name",
   "Description",
   "Tech Stack",
-  "Link"
+  "Link",
 ] as const;
 
 export const BOARD_TEMPLATES = {
   "job-board": {
     label: "Job Board",
     fields: JOB_BOARD_TEMPLATE_FIELDS,
-    template: `**Project Title:**\n**Project Description:**\n**Required Skills:**\n**Budget Range:** $/h or total $\n**Contact Method:**\n**Timeline:**\n**Additional Details:**`
+    template: `**Project Title:**\n**Project Description:**\n**Required Skills:**\n**Budget Range:** $/h or total $\n**Contact Method:**\n**Timeline:**\n**Additional Details:**`,
   },
   "dev-board": {
     label: "Dev Board",
     fields: DEV_BOARD_TEMPLATE_FIELDS,
-    template: `**Skills/Expertise:**\n**Experience Level:** Junior / Mid / Senior / Expert\n**Availability:**\n**Rate/Hour:**\n**Contact Method:**\n**Portfolio Link:**\n**Previous Projects/Examples:**`
+    template: `**Skills/Expertise:**\n**Experience Level:** Junior / Mid / Senior / Expert\n**Availability:**\n**Rate/Hour:**\n**Contact Method:**\n**Portfolio Link:**\n**Previous Projects/Examples:**`,
   },
-  "showcase": {
+  showcase: {
     label: "Showcase",
     fields: SHOWCASE_TEMPLATE_FIELDS,
-    template: `**Project Name:**\n**Description:** What it does and why you built it\n**Tech Stack:**\n**Link:** GitHub, live demo, or screenshot`
-  }
+    template: `**Project Name:**\n**Description:** What it does and why you built it\n**Tech Stack:**\n**Link:** GitHub, live demo, or screenshot`,
+  },
 } as const;
 
 export type ValidatedBoardType = keyof typeof BOARD_TEMPLATES;
@@ -244,14 +244,15 @@ export function buildTemplateContextText(
   threadTitle: string,
   postContent: string,
   appliedTagNames: string[],
-  availableTagNames: string[]
+  availableTagNames: string[],
 ): string {
   const board = BOARD_TEMPLATES[boardType];
   const fieldsList = board.fields.map((f) => `"${f}"`).join(", ");
 
-  const tagInfo = boardType === "showcase"
-    ? ""
-    : `\nApplied tags: ${appliedTagNames.length > 0 ? appliedTagNames.join(", ") : "none"}\nAvailable tags: ${availableTagNames.join(", ")}`;
+  const tagInfo =
+    boardType === "showcase"
+      ? ""
+      : `\nApplied tags: ${appliedTagNames.length > 0 ? appliedTagNames.join(", ") : "none"}\nAvailable tags: ${availableTagNames.join(", ")}`;
 
   return `Board type: ${boardType} (${board.label})
 Thread title: "${threadTitle}"${tagInfo}

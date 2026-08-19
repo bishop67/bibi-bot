@@ -19,5 +19,4 @@ export class MessageCreate {
   async checkThreadHelpLike(command: SimpleCommandMessage) {
     await handleCheckThreadHelpLike(command);
   }
-
 }

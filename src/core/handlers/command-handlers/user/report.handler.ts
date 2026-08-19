@@ -57,7 +57,8 @@ export async function executeReport(
   if (!ConfigValidator.isFeatureEnabled("REPORT_CHANNELS")) {
     ConfigValidator.logFeatureDisabled("Member Reports", "REPORT_CHANNELS");
     return {
-      error: "Reports aren't configured on this server yet. Please contact a mod directly.",
+      error:
+        "Reports aren't configured on this server yet. Please contact a mod directly.",
     };
   }
 
@@ -67,7 +68,8 @@ export async function executeReport(
 
   if (!reportChannel || !reportChannel.isTextBased()) {
     return {
-      error: "Couldn't find the configured report channel. Please contact a mod directly.",
+      error:
+        "Couldn't find the configured report channel. Please contact a mod directly.",
     };
   }
 
@@ -86,7 +88,9 @@ export async function executeReport(
   } catch {
     // Cooldown is recorded only past this point, so a report that never
     // reached the channel does not cost the member their next minute.
-    return { error: "Failed to submit the report. Please contact a mod directly." };
+    return {
+      error: "Failed to submit the report. Please contact a mod directly.",
+    };
   }
 
   lastReportAt.set(cooldownKey, now);

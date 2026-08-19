@@ -30,7 +30,7 @@ async function searchGifs(query: string, limit: number = 5): Promise<string[]> {
       throw new Error(`Klipy API error: ${response.status}`);
     }
 
-    const data = await response.json() as {
+    const data = (await response.json()) as {
       result?: boolean;
       data?: { data?: Array<{ file?: { md?: { gif?: { url?: string } } } }> };
     };
@@ -89,7 +89,8 @@ function createGatherChannelContext(requestingUserId: string) {
         if (!permissions?.has(PermissionFlagsBits.ReadMessageHistory)) {
           return {
             success: false,
-            error: "You do not have permission to read messages in this channel",
+            error:
+              "You do not have permission to read messages in this channel",
           };
         }
 

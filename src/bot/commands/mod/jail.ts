@@ -3,10 +3,7 @@ import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
 import type { CommandInteraction, User } from "discord.js";
-import {
-  ApplicationCommandOptionType,
-  PermissionFlagsBits,
-} from "discord.js";
+import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
 import { Discord, Slash, SlashOption } from "discordx";
 
 @Discord()
@@ -81,6 +78,8 @@ export class Jail {
       return;
     }
 
-    await safeEditReply(interaction, { content: result.message || "Member jailed" });
+    await safeEditReply(interaction, {
+      content: result.message || "Member jailed",
+    });
   }
 }

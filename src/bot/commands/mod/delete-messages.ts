@@ -30,7 +30,10 @@ export class DeleteMessages {
     amount: number,
     interaction: CommandInteraction,
   ) {
-    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))) return;
+    if (
+      !(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))
+    )
+      return;
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)
         .values({

@@ -15,7 +15,6 @@ import { Client } from "discordx";
 import "./bot";
 import "./health";
 
-
 ConfigValidator.validateConfig();
 
 const token = process.env.TOKEN;
@@ -115,7 +114,10 @@ bot.once("clientReady", async () => {
         if (member.user.bot) continue;
         await MembersService.upsertDbMember(member, "join");
       }
-      botLogger.info(`Backfilled members for guild`, { guildId: guild.id, count: members.size });
+      botLogger.info(`Backfilled members for guild`, {
+        guildId: guild.id,
+        count: members.size,
+      });
 
       const firstMember = members.first();
       if (firstMember) await MembersService.updateMemberCount(firstMember);
@@ -125,12 +127,13 @@ bot.once("clientReady", async () => {
   backfillResults.forEach((result, i) => {
     if (result.status === "rejected") {
       const guild = bot.guilds.cache.at(i);
-      botLogger.error(`Backfill failed for guild`, { guildId: guild?.id ?? "unknown", error: String(result.reason) });
+      botLogger.error(`Backfill failed for guild`, {
+        guildId: guild?.id ?? "unknown",
+        error: String(result.reason),
+      });
     }
   });
 });
-
-
 
 bot.on("interactionCreate", (interaction) => {
   // Ignore DMs - only work in guild (server)
@@ -154,9 +157,13 @@ bot.on(
 );
 
 // discord.js rethrows an unhandled "error" event
-bot.on("error", (e) => botLogger.error("Discord client error", { error: String(e) }));
+bot.on("error", (e) =>
+  botLogger.error("Discord client error", { error: String(e) }),
+);
 
-bot.on("shardError", (e) => botLogger.error("Shard error", { error: String(e) }));
+bot.on("shardError", (e) =>
+  botLogger.error("Shard error", { error: String(e) }),
+);
 
 // A transient network fault must degrade, not kill the process: the container's
 // restart policy can be defeated by a stale containerd task, turning a blip into

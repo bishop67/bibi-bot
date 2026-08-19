@@ -20,16 +20,15 @@ export class MemberDataService {
       const memberRoleCreates = prepareMemberRolesData(guildMember);
 
       // Upsert member first (required for foreign key constraints)
-      await db.insert(member)
-        .values(memberData)
-        .onConflictDoUpdate({
-          target: member.memberId,
-          set: memberData,
-        });
+      await db.insert(member).values(memberData).onConflictDoUpdate({
+        target: member.memberId,
+        set: memberData,
+      });
 
       // Run memberGuild upsert and role sync in parallel
       await Promise.all([
-        db.insert(memberGuild)
+        db
+          .insert(memberGuild)
           .values(memberGuildData)
           .onConflictDoUpdate({
             target: [memberGuild.memberId, memberGuild.guildId],
@@ -37,15 +36,17 @@ export class MemberDataService {
           }),
         // Delete and recreate roles
         (async () => {
-          await db.delete(memberRole)
+          await db
+            .delete(memberRole)
             .where(
               and(
                 eq(memberRole.memberId, discordMember.id),
                 eq(memberRole.guildId, discordMember.guild.id),
-              )
+              ),
             );
           if (memberRoleCreates.length > 0) {
-            await db.insert(memberRole)
+            await db
+              .insert(memberRole)
               .values(memberRoleCreates)
               .onConflictDoNothing();
           }

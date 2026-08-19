@@ -26,7 +26,9 @@ export class VoiceService {
     // dayjs if event is older than 10 days delete it
     allOpenVoiceEvents.forEach(async (event) => {
       if (dayjs().diff(dayjs(event.join), "days") > 10) {
-        await db.delete(guildVoiceEvents).where(eq(guildVoiceEvents.id, event.id));
+        await db
+          .delete(guildVoiceEvents)
+          .where(eq(guildVoiceEvents.id, event.id));
       }
     });
   }
@@ -128,10 +130,13 @@ export class VoiceService {
     if (!oldVoiceState.channelId && newVoiceState.channelId) {
       // IF LAST VOICE EVENT WAS JOIN REMOVE IT BECAUSE OF DUPLICATE
       if (lastVoiceEvent?.leave === null)
-        await db.delete(guildVoiceEvents).where(eq(guildVoiceEvents.id, lastVoiceEvent.id));
+        await db
+          .delete(guildVoiceEvents)
+          .where(eq(guildVoiceEvents.id, lastVoiceEvent.id));
 
       // CREATE VOICE EVENT AFTER JOIN
-      const [created] = await db.insert(guildVoiceEvents)
+      const [created] = await db
+        .insert(guildVoiceEvents)
         .values({ memberId, channelId, guildId })
         .returning();
       return created;
@@ -142,7 +147,8 @@ export class VoiceService {
       // CREATE VOICE EVENT AFTER LEAVE
       if (lastVoiceEvent?.leave === null) {
         lastVoiceEvent = await daysBetween(data);
-        const [updated] = await db.update(guildVoiceEvents)
+        const [updated] = await db
+          .update(guildVoiceEvents)
           .set({ leave: new Date().toISOString() })
           .where(eq(guildVoiceEvents.id, lastVoiceEvent!.id))
           .returning();
@@ -156,12 +162,14 @@ export class VoiceService {
     if (oldVoiceState.channelId !== newVoiceState.channelId) {
       if (lastVoiceEvent?.leave === null) {
         lastVoiceEvent = await daysBetween(data);
-        await db.update(guildVoiceEvents)
+        await db
+          .update(guildVoiceEvents)
           .set({ leave: new Date().toISOString() })
           .where(eq(guildVoiceEvents.id, lastVoiceEvent!.id));
       }
 
-      const [created] = await db.insert(guildVoiceEvents)
+      const [created] = await db
+        .insert(guildVoiceEvents)
         .values({ memberId, channelId, guildId })
         .returning();
       return created;
@@ -173,7 +181,8 @@ export class VoiceService {
   static async updateUserVoiceState(newVoiceState: VoiceState) {
     if (!newVoiceState.channel) return;
 
-    await db.update(memberGuild)
+    await db
+      .update(memberGuild)
       .set({
         deafened: newVoiceState.serverDeaf || false,
         muted: newVoiceState.serverMute || false,
@@ -182,7 +191,7 @@ export class VoiceService {
         and(
           eq(memberGuild.guildId, newVoiceState.guild.id),
           eq(memberGuild.memberId, newVoiceState.member!.id),
-        )
+        ),
       );
   }
 }
@@ -205,11 +214,15 @@ async function daysBetween({
   if (daysBetween.length < 2) return lastVoiceEvent;
 
   for (let i = 1; i < daysBetween.length; i++) {
-    await db.update(guildVoiceEvents)
-      .set({ leave: dayjs(lastVoiceEvent.join).utc().endOf("day").toISOString() })
+    await db
+      .update(guildVoiceEvents)
+      .set({
+        leave: dayjs(lastVoiceEvent.join).utc().endOf("day").toISOString(),
+      })
       .where(eq(guildVoiceEvents.id, lastVoiceEvent.id));
 
-    const [created] = await db.insert(guildVoiceEvents)
+    const [created] = await db
+      .insert(guildVoiceEvents)
       .values({
         memberId,
         channelId,

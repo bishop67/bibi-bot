@@ -25,7 +25,7 @@ export class SpamDetectionService {
         and(
           eq(memberMessages.memberId, memberId),
           eq(memberMessages.guildId, guildId),
-        )
+        ),
       );
     return (result?.count ?? 0) === 0;
   }

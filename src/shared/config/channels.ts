@@ -15,7 +15,8 @@ export const MEMBERS_COUNT_CHANNELS =
   process.env.MEMBERS_COUNT_CHANNELS?.split(",")?.map((s) => s.trim()) || [];
 
 export const TEMPLATE_VALIDATION_CHANNELS =
-  process.env.TEMPLATE_VALIDATION_CHANNELS?.split(",")?.map((s) => s.trim()) || [];
+  process.env.TEMPLATE_VALIDATION_CHANNELS?.split(",")?.map((s) => s.trim()) ||
+  [];
 
 export const SPAM_EXEMPT_CHANNELS =
   process.env.SPAM_EXEMPT_CHANNELS?.split(",")?.map((s) => s.trim()) || [];

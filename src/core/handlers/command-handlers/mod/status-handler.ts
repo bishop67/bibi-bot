@@ -105,17 +105,41 @@ export async function executeStatus(
     .setColor(0x5865f2)
     .addFields(
       { name: "Uptime", value: formatUptime(uptimeSeconds), inline: true },
-      { name: "Memory (RSS / Container Limit)", value: memoryField, inline: true },
-      { name: "Heap (Used / Total)", value: `${formatBytes(mem.heapUsed)} / ${formatBytes(heapTotalSafe)} (${heapPercent}%)`, inline: true },
-      { name: "External / Buffers", value: `${formatBytes(mem.external)} / ${formatBytes(mem.arrayBuffers)}`, inline: true },
-      { name: "CPU Time (process)", value: `${cpuMs.toFixed(0)} ms (${cpuPercent}% of uptime)`, inline: true },
-      { name: "Event Loop Lag", value: `${eventLoopLag.toFixed(2)} ms`, inline: true },
+      {
+        name: "Memory (RSS / Container Limit)",
+        value: memoryField,
+        inline: true,
+      },
+      {
+        name: "Heap (Used / Total)",
+        value: `${formatBytes(mem.heapUsed)} / ${formatBytes(heapTotalSafe)} (${heapPercent}%)`,
+        inline: true,
+      },
+      {
+        name: "External / Buffers",
+        value: `${formatBytes(mem.external)} / ${formatBytes(mem.arrayBuffers)}`,
+        inline: true,
+      },
+      {
+        name: "CPU Time (process)",
+        value: `${cpuMs.toFixed(0)} ms (${cpuPercent}% of uptime)`,
+        inline: true,
+      },
+      {
+        name: "Event Loop Lag",
+        value: `${eventLoopLag.toFixed(2)} ms`,
+        inline: true,
+      },
       { name: "Gateway Ping", value: gatewayPing, inline: true },
       { name: "REST API Latency", value: restPing, inline: true },
       { name: "Guilds Cached", value: `${guildCount}`, inline: true },
       { name: "Members Cached", value: `${cachedMembers}`, inline: true },
       { name: "Postgres Pool", value: pgPoolMax, inline: true },
-      { name: "Runtime", value: `Bun ${process.versions.bun ?? "unknown"} / V8 ${process.versions.v8 ?? "unknown"}`, inline: true },
+      {
+        name: "Runtime",
+        value: `Bun ${process.versions.bun ?? "unknown"} / V8 ${process.versions.v8 ?? "unknown"}`,
+        inline: true,
+      },
     )
     .setFooter({
       text: "Yes, The host server is rich (64GB), but I'm living on a Docker allowance.",

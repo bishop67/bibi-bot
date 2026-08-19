@@ -62,7 +62,8 @@ export class MemberUpdateQueueService {
       if (VerifyAllUsersService.isVerificationRunning(item.guildId)) return;
 
       const deleteItem = () =>
-        db.delete(memberUpdateQueue)
+        db
+          .delete(memberUpdateQueue)
           .where(eq(memberUpdateQueue.id, item.id))
           .catch((e) => error("Failed to remove queue item:", e));
 
@@ -76,13 +77,14 @@ export class MemberUpdateQueueService {
       try {
         member = await guild.members.fetch(item.memberId);
       } catch {
-        await db.update(memberGuild)
+        await db
+          .update(memberGuild)
           .set({ status: false })
           .where(
             and(
               eq(memberGuild.memberId, item.memberId),
               eq(memberGuild.guildId, item.guildId),
-            )
+            ),
           );
         await deleteItem();
         return;

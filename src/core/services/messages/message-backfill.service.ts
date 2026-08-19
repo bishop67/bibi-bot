@@ -284,7 +284,7 @@ export class MessageBackfillService {
     const perms = channel.permissionsFor(me);
     return Boolean(
       perms?.has(PermissionFlagsBits.ViewChannel) &&
-        perms.has(PermissionFlagsBits.ReadMessageHistory),
+      perms.has(PermissionFlagsBits.ReadMessageHistory),
     );
   }
 

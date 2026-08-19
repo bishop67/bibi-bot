@@ -50,7 +50,8 @@ export function prepareMemberGuildData(member: GuildMember) {
     presenceUpdatedAt: member.presence ? new Date().toISOString() : null,
     pending: member.pending,
     premiumSince: member.premiumSince?.toISOString() ?? null,
-    communicationDisabledUntil: member.communicationDisabledUntil?.toISOString() ?? null,
+    communicationDisabledUntil:
+      member.communicationDisabledUntil?.toISOString() ?? null,
     flags: member.flags.bitfield,
     displayColor: member.displayColor || null,
     avatarDecorationData: member.avatarDecorationData

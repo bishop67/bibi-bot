@@ -1,5 +1,10 @@
 import type { APIEmbed } from "discord.js";
-import { BOT_ICON, RED_COLOR, YELLOW_COLOR, GREEN_COLOR } from "@/shared/config/branding";
+import {
+  BOT_ICON,
+  RED_COLOR,
+  YELLOW_COLOR,
+  GREEN_COLOR,
+} from "@/shared/config/branding";
 import { BOARD_TEMPLATES } from "@/shared/ai/prompts";
 import type { ValidatedBoardType } from "@/shared/ai/prompts";
 import { botLogger } from "@/lib/telemetry";
@@ -68,7 +73,10 @@ function extractFieldsFromContent(
 ): Record<string, string> {
   const extracted: Record<string, string> = {};
   const board = BOARD_TEMPLATES[boardType];
-  const lines = postContent.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = postContent
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   for (const field of board.fields) {
     const escaped = field.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
@@ -101,7 +109,7 @@ function extractFieldsFromContent(
     boardType,
     contentLines: lines.length,
     extractedKeys: Object.keys(extracted),
-    extracted
+    extracted,
   });
 
   return extracted;
@@ -176,7 +184,11 @@ export const templateValidationDmEmbed = (
     });
   }
 
-  if (params.result.scamRisk && params.result.scamRisk !== "low" && params.result.scamReason) {
+  if (
+    params.result.scamRisk &&
+    params.result.scamRisk !== "low" &&
+    params.result.scamReason
+  ) {
     fields.push({
       name: "Notice",
       value: params.result.scamReason,
@@ -191,9 +203,10 @@ export const templateValidationDmEmbed = (
   });
 
   const remainingStrikes = params.maxStrikes - params.strikes;
-  const strikeWarning = remainingStrikes <= 0
-    ? `\n\n**You have been jailed for repeated violations (${params.strikes}/${params.maxStrikes} strikes).**`
-    : `\n\n**Strike ${params.strikes}/${params.maxStrikes}.** You will be jailed after ${remainingStrikes} more removal${remainingStrikes === 1 ? "" : "s"}.`;
+  const strikeWarning =
+    remainingStrikes <= 0
+      ? `\n\n**You have been jailed for repeated violations (${params.strikes}/${params.maxStrikes} strikes).**`
+      : `\n\n**Strike ${params.strikes}/${params.maxStrikes}.** You will be jailed after ${remainingStrikes} more removal${remainingStrikes === 1 ? "" : "s"}.`;
 
   return {
     color: randomDmColor(),
@@ -219,9 +232,12 @@ export const templateValidationNotificationEmbed = (
 ): APIEmbed => {
   const board = BOARD_TEMPLATES[params.boardType];
 
-  const color = params.scamRisk === "high" ? RED_COLOR
-    : params.scamRisk === "medium" ? YELLOW_COLOR
-    : GREEN_COLOR;
+  const color =
+    params.scamRisk === "high"
+      ? RED_COLOR
+      : params.scamRisk === "medium"
+        ? YELLOW_COLOR
+        : GREEN_COLOR;
 
   const fields: APIEmbed["fields"] = [
     {

@@ -14,8 +14,7 @@ export class StatusCommand {
     dmPermission: false,
   })
   async status(interaction: CommandInteraction) {
-    if (!(await safeDeferReply(interaction)))
-      return;
+    if (!(await safeDeferReply(interaction))) return;
 
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)

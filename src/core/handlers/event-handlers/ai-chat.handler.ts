@@ -81,9 +81,7 @@ function shouldRespond(message: Message, client: Client): boolean {
     (role) => role.name.toLowerCase() === "bibi",
   );
   const isReply = isReplyToBot(message, client);
-  const isBotMention = BIBI_PATTERN.test(
-    message.content.toLowerCase(),
-  );
+  const isBotMention = BIBI_PATTERN.test(message.content.toLowerCase());
 
   return isMention || isRoleMention || isReply || isBotMention;
 }

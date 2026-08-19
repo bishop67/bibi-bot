@@ -40,7 +40,7 @@ export async function handleMessageCreate(message: Message): Promise<void> {
   }
 
   await MessagesService.addMessageDb(message);
-  
+
   await MessagesService.levelUpMessage(message);
 }
 

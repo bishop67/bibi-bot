@@ -27,7 +27,9 @@ export const memberSelectSchema = createSelectSchema(member, {
 });
 export type Member = typeof memberSelectSchema.static;
 export const memberInsertSchema = t.Omit(memberSelectSchema, ["updatedAt"]);
-export const memberUpdateSchema = t.Partial(t.Omit(memberSelectSchema, ["memberId"]));
+export const memberUpdateSchema = t.Partial(
+  t.Omit(memberSelectSchema, ["memberId"]),
+);
 
 // MemberGuild schemas
 export const memberGuildSelectSchema = createSelectSchema(memberGuild, {
@@ -35,8 +37,13 @@ export const memberGuildSelectSchema = createSelectSchema(memberGuild, {
   guildId: t.String({ minLength: 17, maxLength: 20 }),
 });
 export type MemberGuild = typeof memberGuildSelectSchema.static;
-export const memberGuildInsertSchema = t.Omit(memberGuildSelectSchema, ["id", "updatedAt"]);
-export const memberGuildUpdateSchema = t.Partial(t.Omit(memberGuildSelectSchema, ["id", "memberId", "guildId"]));
+export const memberGuildInsertSchema = t.Omit(memberGuildSelectSchema, [
+  "id",
+  "updatedAt",
+]);
+export const memberGuildUpdateSchema = t.Partial(
+  t.Omit(memberGuildSelectSchema, ["id", "memberId", "guildId"]),
+);
 
 // MemberRole schemas
 export const memberRoleSelectSchema = createSelectSchema(memberRole, {
@@ -45,8 +52,14 @@ export const memberRoleSelectSchema = createSelectSchema(memberRole, {
   guildId: t.String({ minLength: 17, maxLength: 20 }),
 });
 export type MemberRole = typeof memberRoleSelectSchema.static;
-export const memberRoleInsertSchema = t.Omit(memberRoleSelectSchema, ["id", "createdAt", "updatedAt"]);
-export const memberRoleUpdateSchema = t.Partial(t.Omit(memberRoleSelectSchema, ["id", "memberId", "roleId"]));
+export const memberRoleInsertSchema = t.Omit(memberRoleSelectSchema, [
+  "id",
+  "createdAt",
+  "updatedAt",
+]);
+export const memberRoleUpdateSchema = t.Partial(
+  t.Omit(memberRoleSelectSchema, ["id", "memberId", "roleId"]),
+);
 
 // MemberMessages schemas
 export const memberMessagesSelectSchema = createSelectSchema(memberMessages, {
@@ -56,18 +69,27 @@ export const memberMessagesSelectSchema = createSelectSchema(memberMessages, {
   channelId: t.String({ minLength: 17, maxLength: 20 }),
 });
 export type MemberMessages = typeof memberMessagesSelectSchema.static;
-export const memberMessagesInsertSchema = t.Omit(memberMessagesSelectSchema, ["createdAt"]);
+export const memberMessagesInsertSchema = t.Omit(memberMessagesSelectSchema, [
+  "createdAt",
+]);
 
 // MemberDeletedMessages schemas
-export const memberDeletedMessagesSelectSchema = createSelectSchema(memberDeletedMessages, {
-  deletedByMemberId: t.String({ minLength: 17, maxLength: 20 }),
-  messageMemberId: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-  messageId: t.String({ minLength: 17, maxLength: 20 }),
-  channelId: t.String({ minLength: 17, maxLength: 20 }),
-});
-export type MemberDeletedMessages = typeof memberDeletedMessagesSelectSchema.static;
-export const memberDeletedMessagesInsertSchema = t.Omit(memberDeletedMessagesSelectSchema, ["id", "createdAt"]);
+export const memberDeletedMessagesSelectSchema = createSelectSchema(
+  memberDeletedMessages,
+  {
+    deletedByMemberId: t.String({ minLength: 17, maxLength: 20 }),
+    messageMemberId: t.String({ minLength: 17, maxLength: 20 }),
+    guildId: t.String({ minLength: 17, maxLength: 20 }),
+    messageId: t.String({ minLength: 17, maxLength: 20 }),
+    channelId: t.String({ minLength: 17, maxLength: 20 }),
+  },
+);
+export type MemberDeletedMessages =
+  typeof memberDeletedMessagesSelectSchema.static;
+export const memberDeletedMessagesInsertSchema = t.Omit(
+  memberDeletedMessagesSelectSchema,
+  ["id", "createdAt"],
+);
 
 // MemberHelper schemas
 export const memberHelperSelectSchema = createSelectSchema(memberHelper, {
@@ -75,33 +97,55 @@ export const memberHelperSelectSchema = createSelectSchema(memberHelper, {
   guildId: t.String({ minLength: 17, maxLength: 20 }),
 });
 export type MemberHelper = typeof memberHelperSelectSchema.static;
-export const memberHelperInsertSchema = t.Omit(memberHelperSelectSchema, ["id", "createdAt"]);
+export const memberHelperInsertSchema = t.Omit(memberHelperSelectSchema, [
+  "id",
+  "createdAt",
+]);
 
 // MemberCommandHistory schemas
-export const memberCommandHistorySelectSchema = createSelectSchema(memberCommandHistory, {
-  memberId: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-  channelId: t.String({ minLength: 17, maxLength: 20 }),
-});
-export type MemberCommandHistory = typeof memberCommandHistorySelectSchema.static;
-export const memberCommandHistoryInsertSchema = t.Omit(memberCommandHistorySelectSchema, ["id", "createdAt"]);
+export const memberCommandHistorySelectSchema = createSelectSchema(
+  memberCommandHistory,
+  {
+    memberId: t.String({ minLength: 17, maxLength: 20 }),
+    guildId: t.String({ minLength: 17, maxLength: 20 }),
+    channelId: t.String({ minLength: 17, maxLength: 20 }),
+  },
+);
+export type MemberCommandHistory =
+  typeof memberCommandHistorySelectSchema.static;
+export const memberCommandHistoryInsertSchema = t.Omit(
+  memberCommandHistorySelectSchema,
+  ["id", "createdAt"],
+);
 
 // MemberUpdateQueue schemas
-export const memberUpdateQueueSelectSchema = createSelectSchema(memberUpdateQueue, {
-  memberId: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-});
+export const memberUpdateQueueSelectSchema = createSelectSchema(
+  memberUpdateQueue,
+  {
+    memberId: t.String({ minLength: 17, maxLength: 20 }),
+    guildId: t.String({ minLength: 17, maxLength: 20 }),
+  },
+);
 export type MemberUpdateQueue = typeof memberUpdateQueueSelectSchema.static;
-export const memberUpdateQueueInsertSchema = t.Omit(memberUpdateQueueSelectSchema, ["id", "createdAt"]);
+export const memberUpdateQueueInsertSchema = t.Omit(
+  memberUpdateQueueSelectSchema,
+  ["id", "createdAt"],
+);
 
 // GuildVoiceEvents schemas
-export const guildVoiceEventsSelectSchema = createSelectSchema(guildVoiceEvents, {
-  memberId: t.String({ minLength: 17, maxLength: 20 }),
-  guildId: t.String({ minLength: 17, maxLength: 20 }),
-  channelId: t.String({ minLength: 17, maxLength: 20 }),
-});
+export const guildVoiceEventsSelectSchema = createSelectSchema(
+  guildVoiceEvents,
+  {
+    memberId: t.String({ minLength: 17, maxLength: 20 }),
+    guildId: t.String({ minLength: 17, maxLength: 20 }),
+    channelId: t.String({ minLength: 17, maxLength: 20 }),
+  },
+);
 export type GuildVoiceEvents = typeof guildVoiceEventsSelectSchema.static;
-export const guildVoiceEventsInsertSchema = t.Omit(guildVoiceEventsSelectSchema, ["id", "join"]);
+export const guildVoiceEventsInsertSchema = t.Omit(
+  guildVoiceEventsSelectSchema,
+  ["id", "join"],
+);
 
 // SyncProgress schemas
 export const syncProgressSelectSchema = createSelectSchema(syncProgress, {
@@ -109,5 +153,9 @@ export const syncProgressSelectSchema = createSelectSchema(syncProgress, {
   type: t.Union([t.Literal("threads"), t.Literal("users")]),
 });
 export type SyncProgress = typeof syncProgressSelectSchema.static;
-export const syncProgressInsertSchema = t.Omit(syncProgressSelectSchema, ["updatedAt"]);
-export const syncProgressUpdateSchema = t.Partial(t.Omit(syncProgressSelectSchema, ["guildId", "type"]));
+export const syncProgressInsertSchema = t.Omit(syncProgressSelectSchema, [
+  "updatedAt",
+]);
+export const syncProgressUpdateSchema = t.Partial(
+  t.Omit(syncProgressSelectSchema, ["guildId", "type"]),
+);

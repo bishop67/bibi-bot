@@ -8,9 +8,12 @@ import * as schema from "./db-schema";
 
 const databaseUrl = process.env.DATABASE_URL!;
 
-export const db = drizzle(postgres(databaseUrl, { onnotice: () => {}, max: 3 }), {
-  schema,
-});
+export const db = drizzle(
+  postgres(databaseUrl, { onnotice: () => {}, max: 3 }),
+  {
+    schema,
+  },
+);
 
 /**
  * Resolves once migrations have finished, or failed.

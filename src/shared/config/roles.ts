@@ -14,7 +14,8 @@ export const STATUS_ROLES =
 export const LEVEL_ROLES =
   process.env.LEVEL_ROLES?.split(",").map((s) => s.trim()) || [];
 
-export const MEMBER_ROLES = process.env.MEMBER_ROLES?.split(",").map((s) => s.trim()) || [];
+export const MEMBER_ROLES =
+  process.env.MEMBER_ROLES?.split(",").map((s) => s.trim()) || [];
 
 export const HELPER_RANKING = HELPER_ROLES.map((role, i) => ({
   name: role,
@@ -68,8 +69,7 @@ export const LEAD_DEV =
 export const TECH_LEAD =
   LEVEL_ROLES.find((r) => r.toLowerCase() === "tech lead!") || LEVEL_ROLES?.[8];
 
-
-  // OG role privileges
+// OG role privileges
 export const SPAM_EXEMPT_ROLES =
   process.env.SPAM_EXEMPT_ROLES?.split(",").map((s) => s.trim()) || [];
 

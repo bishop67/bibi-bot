@@ -16,7 +16,6 @@ export async function handleGuildMemberUpdate(
   oldMember: GuildMember | PartialGuildMember,
   newMember: GuildMember,
 ): Promise<void> {
-  
   const guildRoles = newMember.guild.roles.cache;
   const memberDbRoles = await db.query.memberRole.findMany({
     where: and(

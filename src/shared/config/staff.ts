@@ -13,9 +13,7 @@ import type { GuildMember } from "discord.js";
  * Manual moderation is unaffected - a moderator can still jail or purge a
  * colleague by running the command by hand.
  */
-export function isStaffMember(
-  member: GuildMember | null | undefined,
-): boolean {
+export function isStaffMember(member: GuildMember | null | undefined): boolean {
   if (!member || !STAFF_ROLES.length) return false;
 
   return member.roles.cache.some((role) => STAFF_ROLES.includes(role.name));

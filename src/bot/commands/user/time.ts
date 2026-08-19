@@ -9,12 +9,14 @@ import { Discord, Slash, SlashOption } from "discordx";
 export class Time {
   @Slash({
     name: "time",
-    description: "Show the current time around the world, or in a specific place",
+    description:
+      "Show the current time around the world, or in a specific place",
   })
   async time(
     @SlashOption({
       name: "location",
-      description: "A city name (e.g. Tokyo) or IANA zone id (e.g. America/Chicago)",
+      description:
+        "A city name (e.g. Tokyo) or IANA zone id (e.g. America/Chicago)",
       required: false,
       type: ApplicationCommandOptionType.String,
       autocomplete: (interaction: AutocompleteInteraction) => {

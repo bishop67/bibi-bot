@@ -9,7 +9,12 @@ import {
   sumToHours,
 } from "@/shared/utils/format.utils";
 import { db } from "@/lib/db";
-import { memberMessages, guildVoiceEvents, memberHelper, memberGuild } from "@/lib/db-schema";
+import {
+  memberMessages,
+  guildVoiceEvents,
+  memberHelper,
+  memberGuild,
+} from "@/lib/db-schema";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 
 export class StatsService {
@@ -190,8 +195,11 @@ export class StatsService {
         and(
           eq(memberMessages.memberId, memberId),
           eq(memberMessages.guildId, guildId),
-          gte(memberMessages.createdAt, dayjs().subtract(days, "day").toISOString()),
-        )
+          gte(
+            memberMessages.createdAt,
+            dayjs().subtract(days, "day").toISOString(),
+          ),
+        ),
       );
     return result?.count ?? 0;
   }
@@ -224,7 +232,7 @@ export class StatsService {
         and(
           eq(memberHelper.guildId, guildId),
           eq(memberHelper.memberId, memberId),
-        )
+        ),
       );
     return result?.count ?? 0;
   }
@@ -237,7 +245,7 @@ export class StatsService {
         and(
           eq(memberHelper.guildId, guildId),
           eq(memberHelper.threadOwnerId, memberId),
-        )
+        ),
       );
     return result?.count ?? 0;
   }
@@ -281,11 +289,17 @@ export class StatsService {
     ]);
 
     return {
-      mostActiveMessageUsers: (mostActiveMessageUsers as any[]).map(bigintToNumber),
+      mostActiveMessageUsers: (mostActiveMessageUsers as any[]).map(
+        bigintToNumber,
+      ),
       mostHelpfulUsers: (mostHelpfulUsers as any[]).map(bigintToNumber),
-      mostActiveMessageChannels: (mostActiveMessageChannels as any[]).map(bigintToNumber),
+      mostActiveMessageChannels: (mostActiveMessageChannels as any[]).map(
+        bigintToNumber,
+      ),
       mostActiveVoiceUsers: (mostActiveVoiceUsers as any[]).map(sumToHours),
-      mostActiveVoiceChannels: (mostActiveVoiceChannels as any[]).map(sumToHours),
+      mostActiveVoiceChannels: (mostActiveVoiceChannels as any[]).map(
+        sumToHours,
+      ),
       totalMessages: Number(totalMessagesResult?.total ?? 0),
       totalVoiceHours: Math.round(
         secondsToHours(totalVoiceHoursResult?.total ?? 0),
@@ -357,7 +371,10 @@ export class StatsService {
   }
 
   static async getUserStats(memberId: string, guildId: string) {
-    const memberGuildData = await StatsService.getMemberGuild(memberId, guildId);
+    const memberGuildData = await StatsService.getMemberGuild(
+      memberId,
+      guildId,
+    );
     if (!memberGuildData) return null;
 
     const [

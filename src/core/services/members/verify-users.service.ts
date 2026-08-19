@@ -3,7 +3,12 @@ import { RolesService } from "@/core/services/roles/roles.service";
 import { db } from "@/lib/db";
 import { guild, memberGuild, memberRole, syncProgress } from "@/lib/db-schema";
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { JAIL, STATUS_ROLES, VERIFIED, VOICE_ONLY } from "@/shared/config/roles";
+import {
+  JAIL,
+  STATUS_ROLES,
+  VERIFIED,
+  VOICE_ONLY,
+} from "@/shared/config/roles";
 import { logTs } from "@/shared/utils/date.utils";
 import {
   Collection,
@@ -33,7 +38,8 @@ export class VerifyAllUsersService {
     this.runningGuilds.add(discordGuild.id);
 
     try {
-      await db.insert(guild)
+      await db
+        .insert(guild)
         .values({ guildId: discordGuild.id, guildName: discordGuild.name })
         .onConflictDoUpdate({
           target: guild.guildId,
@@ -66,7 +72,8 @@ export class VerifyAllUsersService {
 
       // Only reset statuses when starting fresh (no saved progress)
       if (!saved) {
-        await db.update(memberGuild)
+        await db
+          .update(memberGuild)
           .set({ status: false })
           .where(eq(memberGuild.guildId, discordGuild.id));
       }
@@ -95,34 +102,41 @@ export class VerifyAllUsersService {
           // Check if member has jail or voiceonly role in DB or on Discord
           const jailRoleId = statusRoles[JAIL]?.id;
           const voiceOnlyRoleId = statusRoles[VOICE_ONLY]?.id;
-          const restrictedRoleIds = [jailRoleId, voiceOnlyRoleId].filter(Boolean) as string[];
+          const restrictedRoleIds = [jailRoleId, voiceOnlyRoleId].filter(
+            Boolean,
+          ) as string[];
 
-          const restrictedDbRole = restrictedRoleIds.length > 0
-            ? await db.query.memberRole.findFirst({
-                where: and(
-                  eq(memberRole.memberId, discordMember.id),
-                  eq(memberRole.guildId, discordGuild.id),
-                  inArray(memberRole.roleId, restrictedRoleIds),
-                ),
-              })
-            : null;
+          const restrictedDbRole =
+            restrictedRoleIds.length > 0
+              ? await db.query.memberRole.findFirst({
+                  where: and(
+                    eq(memberRole.memberId, discordMember.id),
+                    eq(memberRole.guildId, discordGuild.id),
+                    inArray(memberRole.roleId, restrictedRoleIds),
+                  ),
+                })
+              : null;
 
           // Also check Discord roles directly (DB might not be synced)
-          const restrictedDiscordRoleId = restrictedRoleIds.find(
-            (id) => discordMember.roles.cache.has(id),
+          const restrictedDiscordRoleId = restrictedRoleIds.find((id) =>
+            discordMember.roles.cache.has(id),
           );
 
           // Prefer jail over voiceonly if both somehow exist
           const keepRoleId =
-            (jailRoleId && (restrictedDbRole?.roleId === jailRoleId || restrictedDiscordRoleId === jailRoleId))
+            jailRoleId &&
+            (restrictedDbRole?.roleId === jailRoleId ||
+              restrictedDiscordRoleId === jailRoleId)
               ? jailRoleId
-              : restrictedDbRole?.roleId ?? restrictedDiscordRoleId ?? null;
+              : (restrictedDbRole?.roleId ?? restrictedDiscordRoleId ?? null);
 
           if (keepRoleId) {
-
             // Remove ALL other roles from Discord, keep only the restricted role
             const rolesToRemove = discordMember.roles.cache
-              .filter((r) => r.id !== discordGuild.id && r.id !== keepRoleId && r.editable)
+              .filter(
+                (r) =>
+                  r.id !== discordGuild.id && r.id !== keepRoleId && r.editable,
+              )
               .map((r) => r.id);
             for (const roleId of rolesToRemove) {
               await discordMember.roles.remove(roleId);
@@ -133,7 +147,8 @@ export class VerifyAllUsersService {
             }
 
             // Clean DB roles: delete all except the restricted role
-            await db.delete(memberRole)
+            await db
+              .delete(memberRole)
               .where(
                 and(
                   eq(memberRole.memberId, discordMember.id),
@@ -146,7 +161,11 @@ export class VerifyAllUsersService {
             for (const statusName of STATUS_ROLES) {
               if (statusName === VERIFIED) continue;
               const role = statusRoles[statusName];
-              if (role && discordMember.roles.cache.has(role.id) && role.editable) {
+              if (
+                role &&
+                discordMember.roles.cache.has(role.id) &&
+                role.editable
+              ) {
                 await discordMember.roles.remove(role.id);
               }
             }
@@ -177,7 +196,8 @@ export class VerifyAllUsersService {
 
         const done = alreadyDone + i + 1;
 
-        await db.insert(syncProgress)
+        await db
+          .insert(syncProgress)
           .values({
             guildId: discordGuild.id,
             type: "users",
@@ -202,12 +222,13 @@ export class VerifyAllUsersService {
       }
 
       // Clear progress on completion
-      await db.delete(syncProgress)
+      await db
+        .delete(syncProgress)
         .where(
           and(
             eq(syncProgress.guildId, discordGuild.id),
             eq(syncProgress.type, "users"),
-          )
+          ),
         )
         .catch(() => {});
 

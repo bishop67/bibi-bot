@@ -82,7 +82,9 @@ export class LogsCommands {
     // is the most privacy-sensitive thing the bot can show. It was
     // Administrator-only as its own command and must not be downgraded just
     // because it now shares a group with command history.
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    if (
+      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+    ) {
       return safeEditReply(
         interaction,
         "That requires Administrator - deleted message content is not available to moderators.",

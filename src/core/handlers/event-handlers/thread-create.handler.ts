@@ -1,7 +1,7 @@
 import { simpleEmbedExample } from "@/core/embeds/simple.embed";
 import {
   templateValidationDmEmbed,
-  templateValidationNotificationEmbed
+  templateValidationNotificationEmbed,
 } from "@/core/embeds/template-validation.embed";
 import { AiTemplateService } from "@/core/services/ai/ai-template.service";
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
@@ -37,7 +37,7 @@ function isValidatedBoard(type: string): type is ValidatedBoardType {
 
 export async function handleThreadCreate(
   thread: AnyThreadChannel,
-  newlyCreated: boolean
+  newlyCreated: boolean,
 ): Promise<void> {
   if (
     !thread.parent ||
@@ -60,13 +60,13 @@ export async function handleThreadCreate(
       embed.description = getThreadWelcomeMessage(
         threadType,
         thread.id,
-        thread.name
+        thread.name,
       );
       embed.footer!.text = threadType;
 
       await thread.send({
         embeds: [embed],
-        allowedMentions: { users: [], roles: [] }
+        allowedMentions: { users: [], roles: [] },
       });
     } catch (_) {}
   }
@@ -74,7 +74,7 @@ export async function handleThreadCreate(
 
 async function validateForumPost(
   thread: ThreadChannel,
-  boardType: ValidatedBoardType
+  boardType: ValidatedBoardType,
 ): Promise<boolean> {
   if (!ConfigValidator.isFeatureEnabled("GOOGLE_GENERATIVE_AI_API_KEY")) {
     botLogger.info("[TemplateValidation] Skipped, AI key not configured");
@@ -85,7 +85,7 @@ async function validateForumPost(
     const starterMessage = await thread.fetchStarterMessage();
     if (!starterMessage) {
       botLogger.info("[TemplateValidation] Skipped, no starter message", {
-        threadId: thread.id
+        threadId: thread.id,
       });
       return true;
     }
@@ -93,7 +93,7 @@ async function validateForumPost(
     const postContent = starterMessage.content;
     if (!postContent.trim()) {
       botLogger.info("[TemplateValidation] Skipped, empty post content", {
-        threadId: thread.id
+        threadId: thread.id,
       });
       return true;
     }
@@ -111,7 +111,7 @@ async function validateForumPost(
       threadName: thread.name,
       boardType,
       contentLength: postContent.length,
-      appliedTags: appliedTagNames
+      appliedTags: appliedTagNames,
     });
 
     const result = await AiTemplateService.validatePost(
@@ -119,12 +119,12 @@ async function validateForumPost(
       thread.name,
       postContent,
       appliedTagNames,
-      availableTagNames
+      availableTagNames,
     );
 
     if (!result) {
       botLogger.warn("[TemplateValidation] AI returned null, allowing post", {
-        threadId: thread.id
+        threadId: thread.id,
       });
       return true;
     }
@@ -140,7 +140,7 @@ async function validateForumPost(
       suggestions: result.suggestions,
       extractedFieldCount,
       extractedFieldKeys: Object.keys(result.extractedFields),
-      extractedFields: result.extractedFields
+      extractedFields: result.extractedFields,
     });
 
     if (result.isValid) return true;
@@ -175,14 +175,14 @@ async function validateForumPost(
               result,
               strikes: currentStrikes,
               maxStrikes: MAX_STRIKES,
-            })
-          ]
+            }),
+          ],
         });
         dmSent = true;
       } catch (dmError) {
         botLogger.warn("[TemplateValidation] Failed to DM user", {
           ownerId,
-          error: String(dmError)
+          error: String(dmError),
         });
       }
 
@@ -192,20 +192,32 @@ async function validateForumPost(
         ownerId,
         dmSent,
         strikes: currentStrikes,
-        missingFields: result.missingFields
+        missingFields: result.missingFields,
       });
 
-      await sendNotification(thread, boardType, ownerId, username, displayName, result);
+      await sendNotification(
+        thread,
+        boardType,
+        ownerId,
+        username,
+        displayName,
+        result,
+      );
 
       // Auto-jail user after MAX_STRIKES removals
       if (currentStrikes >= MAX_STRIKES) {
-        botLogger.warn("[TemplateValidation] Auto-jailing user after repeated violations", {
-          ownerId,
-          strikes: currentStrikes,
-        });
+        botLogger.warn(
+          "[TemplateValidation] Auto-jailing user after repeated violations",
+          {
+            ownerId,
+            strikes: currentStrikes,
+          },
+        );
 
         try {
-          const owner = await thread.guild.members.fetch(ownerId).catch(() => null);
+          const owner = await thread.guild.members
+            .fetch(ownerId)
+            .catch(() => null);
           await DeleteUserMessagesService.jailAndDeleteMessages({
             automated: true,
             guild: thread.guild,
@@ -226,12 +238,12 @@ async function validateForumPost(
 
     try {
       await thread.delete(
-        "Template validation failed: missing required fields"
+        "Template validation failed: missing required fields",
       );
     } catch (deleteError) {
       botLogger.error("[TemplateValidation] Failed to delete thread", {
         threadId: thread.id,
-        error: String(deleteError)
+        error: String(deleteError),
       });
     }
 
@@ -239,7 +251,7 @@ async function validateForumPost(
   } catch (error) {
     botLogger.error("[TemplateValidation] Unexpected error, allowing post", {
       threadId: thread.id,
-      error: String(error)
+      error: String(error),
     });
     return true;
   }
@@ -259,7 +271,8 @@ async function sendNotification(
 
   try {
     const notificationChannel = thread.guild.channels.cache.find(
-      (ch) => ch.isTextBased() && TEMPLATE_VALIDATION_CHANNELS.includes(ch.name)
+      (ch) =>
+        ch.isTextBased() && TEMPLATE_VALIDATION_CHANNELS.includes(ch.name),
     );
 
     if (!notificationChannel || !notificationChannel.isTextBased()) return;
@@ -276,9 +289,9 @@ async function sendNotification(
           summary: result.summary,
           scamRisk: result.scamRisk,
           scamReason: result.scamReason,
-        })
+        }),
       ],
-      allowedMentions: { users: [], roles: [] }
+      allowedMentions: { users: [], roles: [] },
     });
   } catch (_) {}
 }

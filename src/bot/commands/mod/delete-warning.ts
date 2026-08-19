@@ -30,7 +30,10 @@ export class DeleteWarning {
       return;
 
     if (!interaction.guildId) {
-      return safeEditReply(interaction, "This command can only be used in a server");
+      return safeEditReply(
+        interaction,
+        "This command can only be used in a server",
+      );
     }
 
     if (interaction.member?.user.id) {
@@ -50,7 +53,10 @@ export class DeleteWarning {
     );
 
     if (!deleted) {
-      return safeEditReply(interaction, `No warning found with ID #${warningId}`);
+      return safeEditReply(
+        interaction,
+        `No warning found with ID #${warningId}`,
+      );
     }
 
     if (interaction.guild) {

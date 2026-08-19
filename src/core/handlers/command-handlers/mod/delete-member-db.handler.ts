@@ -20,12 +20,13 @@ export async function executeDeleteMemberDb(
   }
 
   try {
-    await db.delete(memberGuild)
+    await db
+      .delete(memberGuild)
       .where(
         and(
           eq(memberGuild.memberId, userId),
           eq(memberGuild.guildId, interaction.guildId),
-        )
+        ),
       );
 
     const [otherGuildResult] = await db

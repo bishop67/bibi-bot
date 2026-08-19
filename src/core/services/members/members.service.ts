@@ -61,7 +61,8 @@ export class MembersService {
     const username = discordMember.user.username;
 
     // create or update member, fetch roles if exist
-    const [dbMember] = await db.insert(member)
+    const [dbMember] = await db
+      .insert(member)
       .values({ memberId, username })
       .onConflictDoUpdate({
         target: member.memberId,
@@ -69,7 +70,7 @@ export class MembersService {
       })
       .returning();
 
-// Get member roles (scoped to this guild - role IDs aren't valid across guilds)
+    // Get member roles (scoped to this guild - role IDs aren't valid across guilds)
     const dbMemberRoles = await db.query.memberRole.findMany({
       where: and(
         eq(memberRole.memberId, memberId),
@@ -88,7 +89,8 @@ export class MembersService {
       }),
     };
 
-    await db.insert(memberGuild)
+    await db
+      .insert(memberGuild)
       .values(memberGuildData)
       .onConflictDoUpdate({
         target: [memberGuild.memberId, memberGuild.guildId],
@@ -108,12 +110,13 @@ export class MembersService {
         try {
           await discordMember.roles.add(role.roleId);
         } catch (error) {
-          await db.delete(memberRole)
+          await db
+            .delete(memberRole)
             .where(
               and(
                 eq(memberRole.memberId, memberId),
                 eq(memberRole.roleId, role.roleId),
-              )
+              ),
             );
         }
       }
@@ -134,8 +137,8 @@ export class MembersService {
       }
 
       // get voice channel by name
-      const joinEventsChannel = discordMember.guild.channels.cache.find(({ name }) =>
-        JOIN_EVENT_CHANNELS.includes(name),
+      const joinEventsChannel = discordMember.guild.channels.cache.find(
+        ({ name }) => JOIN_EVENT_CHANNELS.includes(name),
       );
 
       // check if voice channel exists and it is voice channel
@@ -167,7 +170,9 @@ export class MembersService {
     } catch (_) {}
   }
 
-  static async updateMemberCount(discordMember: GuildMember | PartialGuildMember) {
+  static async updateMemberCount(
+    discordMember: GuildMember | PartialGuildMember,
+  ) {
     if (discordMember.user.bot || !SHOULD_COUNT_MEMBERS) return;
 
     // await member count - use cache if fetch fails due to rate limit
@@ -179,8 +184,8 @@ export class MembersService {
 
     for (const channelName of MEMBERS_COUNT_CHANNELS) {
       // find member: channel
-      const memberCountChannel = discordMember.guild.channels.cache.find((channel) =>
-        channel.name.includes(channelName),
+      const memberCountChannel = discordMember.guild.channels.cache.find(
+        (channel) => channel.name.includes(channelName),
       );
 
       // if no channel return
@@ -204,7 +209,8 @@ export class MembersService {
     const guildName = discordGuild.name;
 
     // create or update guild
-    const [guildData] = await db.insert(guild)
+    const [guildData] = await db
+      .insert(guild)
       .values({ guildId, guildName })
       .onConflictDoUpdate({
         target: guild.guildId,
@@ -349,7 +355,8 @@ export class MembersService {
     guildId: string,
     lookback: number,
   ): Promise<void> {
-    await db.insert(memberGuild)
+    await db
+      .insert(memberGuild)
       .values({ guildId, lookback, memberId, status: true })
       .onConflictDoUpdate({
         target: [memberGuild.memberId, memberGuild.guildId],
@@ -367,7 +374,8 @@ export class MembersService {
    * write failed with a foreign key violation.
    */
   static async upsertDbGuild(discordGuild: Guild): Promise<void> {
-    await db.insert(guild)
+    await db
+      .insert(guild)
       .values({ guildId: discordGuild.id, guildName: discordGuild.name })
       .onConflictDoUpdate({
         target: guild.guildId,
@@ -380,7 +388,8 @@ export class MembersService {
     guildName: string,
     lookback: number,
   ): Promise<void> {
-    await db.insert(guild)
+    await db
+      .insert(guild)
       .values({ guildId, guildName, lookback })
       .onConflictDoUpdate({
         target: guild.guildId,
@@ -410,7 +419,8 @@ export class MembersService {
         ),
       });
       if (memberGuildData) {
-        await db.update(memberGuild)
+        await db
+          .update(memberGuild)
           .set({ nickname: newMember.nickname })
           .where(eq(memberGuild.id, memberGuildData.id));
       }
@@ -426,15 +436,26 @@ export class MembersService {
 
     const guildMember = await db.query.memberGuild.findFirst({
       where: and(
-        eq(memberGuild.guildId, voiceState?.guild.id || discordMember?.guild.id),
-        eq(memberGuild.memberId, discordMember?.id || voiceState?.member?.id || ""),
+        eq(
+          memberGuild.guildId,
+          voiceState?.guild.id || discordMember?.guild.id,
+        ),
+        eq(
+          memberGuild.memberId,
+          discordMember?.id || voiceState?.member?.id || "",
+        ),
       ),
     });
 
     if (guildMember && discordMember) {
-      const fetchedMember = discordMember.partial ? await discordMember.fetch() : discordMember;
+      const fetchedMember = discordMember.partial
+        ? await discordMember.fetch()
+        : discordMember;
 
-      if (guildMember.nickname && guildMember.nickname !== fetchedMember.nickname) {
+      if (
+        guildMember.nickname &&
+        guildMember.nickname !== fetchedMember.nickname
+      ) {
         await fetchedMember.setNickname(guildMember.nickname);
       }
 

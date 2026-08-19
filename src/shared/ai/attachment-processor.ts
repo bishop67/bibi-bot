@@ -52,8 +52,21 @@ export async function extractCodeFromAttachments(
   return extractedCode || null;
 }
 
-export async function extractImageUrls(message: Message): Promise<string[]> {
-  const images: string[] = [];
+/**
+ * An image to send to the model, with the type the AI SDK needs alongside it.
+ *
+ * The URL alone was enough for the deprecated "image" content part, which
+ * guessed the type itself. A "file" part will not guess, so the content type
+ * has to survive the trip from the attachment - it was being read here to
+ * filter on, then thrown away.
+ */
+export interface AiImage {
+  url: string;
+  mediaType: string;
+}
+
+export async function extractImageUrls(message: Message): Promise<AiImage[]> {
+  const images: AiImage[] = [];
 
   for (const attachment of message.attachments.values()) {
     if (!attachment.contentType?.startsWith("image/")) continue;
@@ -62,7 +75,7 @@ export async function extractImageUrls(message: Message): Promise<string[]> {
     try {
       const response = await fetch(attachment.url, { method: "HEAD" });
       if (response.ok) {
-        images.push(attachment.url);
+        images.push({ url: attachment.url, mediaType: attachment.contentType });
       }
     } catch {
       // Skip inaccessible images
@@ -80,7 +93,8 @@ export async function extractImageUrls(message: Message): Promise<string[]> {
     try {
       const response = await fetch(sticker.url, { method: "HEAD" });
       if (response.ok) {
-        images.push(sticker.url);
+        // Both surviving sticker formats are PNG; APNG is a PNG extension.
+        images.push({ url: sticker.url, mediaType: "image/png" });
       }
     } catch {
       // Skip inaccessible stickers

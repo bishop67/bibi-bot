@@ -1,4 +1,5 @@
 import {
+  type AiImage,
   extractCodeFromAttachments,
   extractImageUrls,
 } from "@/shared/ai/attachment-processor";
@@ -205,16 +206,20 @@ export class AiChatService {
 
   private static buildUserMessage(
     text: string,
-    images: string[],
+    images: AiImage[],
   ): ModelMessage {
     if (images.length > 0) {
       return {
         role: "user",
         content: [
           { type: "text", text },
-          ...images.map((url) => ({
-            type: "image" as const,
-            image: url,
+          // "file" with an explicit mediaType, not the deprecated "image"
+          // part - that one warned on every single call, six stack-trace lines
+          // per image, and is on its way out of the SDK.
+          ...images.map(({ url, mediaType }) => ({
+            type: "file" as const,
+            mediaType,
+            data: url,
           })),
         ],
       };
@@ -225,7 +230,7 @@ export class AiChatService {
   private static stripImagesFromMessage(msg: ModelMessage): ModelMessage {
     if (Array.isArray(msg.content)) {
       const filtered = (msg.content as any[]).filter(
-        (part) => part.type !== "image",
+        (part) => part.type !== "image" && part.type !== "file",
       );
       if (filtered.length === 0) return { role: "user", content: "" };
       if (filtered.length === 1 && filtered[0].type === "text") {

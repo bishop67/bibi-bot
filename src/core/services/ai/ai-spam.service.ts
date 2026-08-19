@@ -5,24 +5,26 @@ import {
 } from "@/shared/integrations/google-ai";
 import { botLogger } from "@/lib/telemetry";
 import type { SpamDetectionContext, SpamDetectionResult } from "@/types";
+import type { AiImage } from "@/shared/ai/attachment-processor";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
 export class AiSpamService {
   static async analyzeForSpam(
     context: SpamDetectionContext,
-    images: string[],
+    images: AiImage[],
   ): Promise<SpamDetectionResult | null> {
     const contextText = buildSpamContextText(context);
 
-    const buildMessages = (imgs: string[]) => [
+    const buildMessages = (imgs: AiImage[]) => [
       {
         role: "user" as const,
         content: [
           { type: "text" as const, text: contextText },
-          ...imgs.map((url) => ({
-            type: "image" as const,
-            image: url,
+          ...imgs.map(({ url, mediaType }) => ({
+            type: "file" as const,
+            mediaType,
+            data: url,
           })),
         ],
       },

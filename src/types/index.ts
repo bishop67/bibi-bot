@@ -1,3 +1,4 @@
+import type { AiImage } from "@/shared/ai/attachment-processor";
 import type { InferSelectModel } from "drizzle-orm";
 import type { memberRole } from "@/lib/db-schema";
 import type { STATUS_ROLES } from "@/shared/config/roles";
@@ -96,12 +97,12 @@ export interface AiChatResponse {
 
 export interface MessageContext {
   context: string;
-  images: string[];
+  images: AiImage[];
 }
 
 export interface ReplyContext {
   replyContext: string;
-  repliedImages: string[];
+  repliedImages: AiImage[];
 }
 
 // Embed types

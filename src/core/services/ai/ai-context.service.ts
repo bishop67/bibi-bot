@@ -2,6 +2,7 @@ import { Collection, Message, ThreadChannel } from "discord.js";
 import { botLogger } from "@/lib/telemetry";
 import { StatsService } from "@/core/services/stats/stats.service";
 import {
+  type AiImage,
   extractCodeFromAttachments,
   extractImageUrls,
 } from "@/shared/ai/attachment-processor";
@@ -86,7 +87,7 @@ export class AiContextService {
   ): Promise<MessageContext> {
     const userId = repliedMessage.author.id;
     const channel = repliedMessage.channel;
-    const images: string[] = [];
+    const images: AiImage[] = [];
 
     try {
       const [recentMessages, afterMessages] = await Promise.all([

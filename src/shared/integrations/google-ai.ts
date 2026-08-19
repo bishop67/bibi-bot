@@ -131,10 +131,16 @@ function categorizeError(error: unknown): ErrorCategory {
     if (apiError.statusCode === 404) return "model_error";
     if (apiError.statusCode === 400) return "non_retryable";
 
+    // Capacity, not quota. Google answers a busy model with 503 UNAVAILABLE,
+    // which is temporary and worth falling back over - but it matched none of
+    // the quota wording below and came out "unknown".
+    if (apiError.statusCode === 503) return "rate_limit";
+
     // Response body-based detection for ambiguous status codes
     if (
       body.includes("RESOURCE_EXHAUSTED") ||
-      body.includes("rateLimitExceeded")
+      body.includes("rateLimitExceeded") ||
+      body.includes("UNAVAILABLE")
     )
       return "rate_limit";
   }
@@ -144,7 +150,14 @@ function categorizeError(error: unknown): ErrorCategory {
     message.includes("RESOURCE_EXHAUSTED") ||
     message.includes("quota") ||
     message.includes("overloaded") ||
-    message.includes("The model is overloaded")
+    message.includes("The model is overloaded") ||
+    // Google's actual wording for a busy model, which matches none of the
+    // above and so was classified "unknown" - seen live as "This model is
+    // currently experiencing high demand. Spikes in demand are usually
+    // temporary. Please try again later."
+    message.includes("experiencing high demand") ||
+    message.includes("Spikes in demand") ||
+    message.includes("UNAVAILABLE")
   )
     return "rate_limit";
 
@@ -236,6 +249,16 @@ class GoogleClientRotator {
           botLogger.info("AI request succeeded", {
             model: FALLBACK_MODELS[this.currentModelIndex],
           });
+
+          // Back to the preferred model for the next request. Nothing used to
+          // reset this on success - only the two failure paths did - so a
+          // single capacity spike on the first model demoted the bot to the
+          // second one permanently, the next spike moved it to the third, and
+          // it walked down the list until it sat on the weakest model for good.
+          // The fallbacks are for getting through a bad minute, not for
+          // choosing which model the bot runs on.
+          this.currentModelIndex = 0;
+
           return result;
         } catch (error) {
           lastError = error;

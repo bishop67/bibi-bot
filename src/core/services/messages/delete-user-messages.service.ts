@@ -116,8 +116,7 @@ export class DeleteUserMessagesService {
   static async jailUser(
     params: DeleteUserMessagesParams,
   ): Promise<{ alreadyJailed: boolean }> {
-    const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]
-      ?.id;
+    const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]?.id;
 
     // Returning quietly here means a spammer the filters already decided to
     // mute just carries on, with nothing anywhere to say why.
@@ -162,12 +161,14 @@ export class DeleteUserMessagesService {
         })
         .onConflictDoNothing();
 
-      await tx.delete(memberRole).where(
-        and(
-          eq(memberRole.memberId, params.memberId),
-          eq(memberRole.guildId, params.guild.id),
-        ),
-      );
+      await tx
+        .delete(memberRole)
+        .where(
+          and(
+            eq(memberRole.memberId, params.memberId),
+            eq(memberRole.guildId, params.guild.id),
+          ),
+        );
 
       await tx.insert(memberRole).values({
         roleId: jailRoleId,
@@ -186,6 +187,8 @@ export class DeleteUserMessagesService {
       action: "jail",
       targetId: params.memberId,
       targetName: params.user?.username ?? "Unknown User",
+      moderatorId: params.moderatorId,
+      moderatorName: params.moderatorName,
       reason: params.reason,
     });
 
@@ -218,7 +221,10 @@ export class DeleteUserMessagesService {
         "Cannot unjail: this guild has no role matching the configured jail name",
         { guildId: params.guild.id, jailRoleName: JAIL ?? "(unset)" },
       );
-      return { ok: false, message: "No jail role is configured on this server." };
+      return {
+        ok: false,
+        message: "No jail role is configured on this server.",
+      };
     }
 
     const discordMember =
@@ -237,7 +243,8 @@ export class DeleteUserMessagesService {
     if (!role?.editable) {
       return {
         ok: false,
-        message: "I cannot manage the jail role - it sits above my highest role.",
+        message:
+          "I cannot manage the jail role - it sits above my highest role.",
       };
     }
 
@@ -335,7 +342,10 @@ export class DeleteUserMessagesService {
     let totalDeleted = 0;
     // Discord will not bulk-delete anything older than 14 days, so clamp
     // rather than silently doing nothing for a larger number.
-    const days = Math.min(Math.max(params.days ?? DEFAULT_DELETE_AGE_DAYS, 1), MAX_DELETE_AGE_DAYS);
+    const days = Math.min(
+      Math.max(params.days ?? DEFAULT_DELETE_AGE_DAYS, 1),
+      MAX_DELETE_AGE_DAYS,
+    );
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
     let skippedChannels = 0;

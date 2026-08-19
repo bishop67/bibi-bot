@@ -141,6 +141,16 @@ export interface DeleteUserMessagesParams {
    * bot deciding to do it on its own.
    */
   automated?: boolean;
+  /**
+   * The moderator who ordered this jail, for the ModLog entry. Left unset by
+   * the automated filters, which is what makes those entries read as Automod.
+   *
+   * Naming them only inside `reason` is not enough: the rank check on /unjail
+   * reads ModLog.moderatorId, and a null there means a hand-applied jail is
+   * indistinguishable from an automatic one.
+   */
+  moderatorId?: string;
+  moderatorName?: string;
 }
 
 // Roles service types

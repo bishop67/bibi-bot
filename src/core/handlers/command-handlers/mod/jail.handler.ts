@@ -36,7 +36,8 @@ async function refuseByRank(
   if (invokerId === guild.ownerId) return null;
 
   const invoker = await guild.members.fetch(invokerId).catch(() => null);
-  if (!invoker) return "I could not check your roles, so I have not jailed anyone.";
+  if (!invoker)
+    return "I could not check your roles, so I have not jailed anyone.";
 
   if (target.roles.highest.position >= invoker.roles.highest.position) {
     return "You cannot jail someone whose highest role is equal to or above your own.";
@@ -72,6 +73,8 @@ export async function executeJail(
     user: user ?? null,
     deleteMessages,
     days,
+    moderatorId: interaction.user.id,
+    moderatorName: interaction.user.username,
     reason: reason
       ? `${reason} (triggered by <@${interaction.user.id}>)`
       : `Manual moderation (triggered by <@${interaction.user.id}>)`,

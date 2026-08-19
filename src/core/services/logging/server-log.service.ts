@@ -51,11 +51,20 @@ function readableMentions(
   if (!guild) return content;
 
   return content
-    .replace(/<@!?(\d+)>/g, (raw, id: string) => {
+    .replace(/<@!?(\d+)>/g, (raw, id: string, offset: number) => {
       const name =
         guild.members.cache.get(id)?.user.username ??
         guild.client.users.cache.get(id)?.username;
-      return name ? `@${name}` : raw;
+      if (!name) return raw;
+
+      // Discord draws a mention as a pill, so people type "<@id>text" with no
+      // space and it still reads as two things. Flattened to flat text that
+      // becomes "@nametext", so the boundary the pill was providing has to be
+      // put back - otherwise the name and the message run into one word.
+      const next = content[offset + raw.length];
+      const needsGap = next !== undefined && !/\s/.test(next);
+
+      return needsGap ? `@${name} ` : `@${name}`;
     })
     .replace(/<@&(\d+)>/g, (raw, id: string) => {
       const name = guild.roles.cache.get(id)?.name;

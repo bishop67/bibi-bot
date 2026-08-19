@@ -124,6 +124,9 @@ thing wrong, and it was wrong low.
       the invite filter still moderates them; only the count channel goes quiet
 - [ ] **9h** `/unjail` writes exactly one `unjail` entry, not two — the handler
       that logs a hand-removed jail role must recognise it as already recorded
+- [ ] **9i** `/jail` likewise writes exactly one `jail` entry, not two
+- [ ] **9j** Jail by hand, release by hand, jail by hand again a minute apart →
+      three separate entries, none collapsed by the duplicate window
 
 The reconciliation is the only statement in this work that rewrites existing
 rows in bulk. It is `UPDATE MemberGuild SET status = false`, scoped to one
@@ -135,16 +138,18 @@ refuses to run at all unless the fetched roster is at least `guild.memberCount`.
 
 Not defects, but known and unverified as of `83856b4`:
 
-- Two members hold the jail role with **no `ModLog` entry at all**:
-  `856483085801095198` (`kryptos.zeta`) and `1528148852971016302`
-  (`theghost023577`). Past recovery from the audit log — decide by hand whether
-  either should stay jailed. Their jail dates cannot be read from the database:
-  `MemberRole.createdAt` tracks the last member sync, not the jail, so it says
-  nothing about when they were put away.
+- One member holds the jail role with **no `ModLog` entry at all**:
+  `1528148852971016302` (`theghost023577`). Past recovery from the audit log —
+  decide by hand whether they should stay jailed. The jail date cannot be read
+  from the database: `MemberRole.createdAt` tracks the last member sync, not the
+  jail, so it says nothing about when they were put away.
+
+  `856483085801095198` (`kryptos.zeta`) was also on this list and is **no longer
+  jailed** — released 2026-08-19, and now has `ModLog` rows either side.
 - The `/unjail` rank check reads `ModLog.moderatorId`. Every jail record
-  predating the attribution fix is null, and the two members above have no
-  record at all, so the check is inert on all of them and they stay releasable
-  by anyone. It protects jails made from that fix onward.
+  predating the attribution fix is null, and the member above has no record at
+  all, so the check is inert on those and they stay releasable by anyone. It
+  protects jails made from that fix onward.
 - Bulk-delete logging is a summary, by design: who ran it, which channel, and a
   per-author count. Bodies are not shown and nothing is stored, because a jail
   sweep clears a fortnight of messages a hundred at a time.

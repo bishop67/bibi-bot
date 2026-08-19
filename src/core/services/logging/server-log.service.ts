@@ -32,6 +32,41 @@ function quote(content: string | null | undefined): string {
   return `\`\`\`\n${truncate(content).replace(/```/g, "``​`")}\n\`\`\``;
 }
 
+/**
+ * Turn raw mention markup into something readable.
+ *
+ * Quoted content is fenced so nothing in it can ping, which also stops Discord
+ * rendering `<@123...>` as a name - the log ends up showing a bare snowflake
+ * where the message showed "@someone". Resolving it here restores the reading
+ * without giving anything back: the result still sits inside the fence, and
+ * a plain "@name" cannot notify anyone even outside one.
+ *
+ * Unresolvable ids keep their number rather than being dropped, since an
+ * unknown mention is still information about what the message said.
+ */
+function readableMentions(
+  content: string,
+  guild: Message<boolean>["guild"],
+): string {
+  if (!guild) return content;
+
+  return content
+    .replace(/<@!?(\d+)>/g, (raw, id: string) => {
+      const name =
+        guild.members.cache.get(id)?.user.username ??
+        guild.client.users.cache.get(id)?.username;
+      return name ? `@${name}` : raw;
+    })
+    .replace(/<@&(\d+)>/g, (raw, id: string) => {
+      const name = guild.roles.cache.get(id)?.name;
+      return name ? `@${name}` : raw;
+    })
+    .replace(/<#(\d+)>/g, (raw, id: string) => {
+      const name = guild.channels.cache.get(id)?.name;
+      return name ? `#${name}` : raw;
+    });
+}
+
 function messageLink(message: Message<boolean> | PartialMessage): string {
   return `https://discord.com/channels/${message.guildId}/${message.channelId}/${message.id}`;
 }
@@ -108,9 +143,9 @@ export class ServerLogService {
           // than implying the message was empty.
           before === null || before === undefined
             ? "*(not cached - the bot did not have the original)*"
-            : quote(before),
+            : quote(readableMentions(before, message.guild)),
           "**After**",
-          quote(message.content),
+          quote(readableMentions(message.content, message.guild)),
         ],
         footer: "message edited",
       }),
@@ -205,7 +240,7 @@ export class ServerLogService {
           // its text. Saying so beats staying silent about the deletion.
           content === null || content === undefined
             ? "*(not cached - the bot did not have the message text)*"
-            : quote(content),
+            : quote(readableMentions(content, message.guild)),
         ],
         footer: "message deleted",
       }),

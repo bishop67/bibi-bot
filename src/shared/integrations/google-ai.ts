@@ -266,11 +266,27 @@ class GoogleClientRotator {
             error instanceof Error ? error.message : String(error);
           lastCategory = categorizeError(error);
 
+          const apiError = getAPICallError(error);
+
           botLogger.error("AI error", {
             model: FALLBACK_MODELS[this.currentModelIndex],
             keyIndex: this.currentKeyIndex + 1,
             category: lastCategory,
             message,
+            // "unknown" means every branch above declined it, so the message
+            // alone has already proved insufficient to identify it. The status
+            // and the body are what actually say what happened - without them
+            // an unrecognised failure logs a line that cannot be acted on.
+            // "Invalid JSON response" is the case in point: the SDK raises it
+            // when Google's response body fails its schema, and the reason is
+            // only ever in the cause and the body.
+            ...(lastCategory === "unknown" && apiError
+              ? {
+                  statusCode: apiError.statusCode,
+                  cause: String(apiError.cause ?? "").slice(0, 300),
+                  responseBody: (apiError.responseBody ?? "").slice(0, 500),
+                }
+              : {}),
           });
 
           if (lastCategory === "image_download") {

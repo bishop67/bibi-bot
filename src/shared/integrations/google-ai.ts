@@ -219,6 +219,11 @@ class GoogleClientRotator {
     const startKeyIndex = this.currentKeyIndex;
     let lastError: unknown;
     let lastCategory: ErrorCategory = "unknown";
+    let lastMessage = "";
+    // Unidentifiable failures seen in this request, against the model that
+    // first produced each. Repeating on the same model rules out the key;
+    // repeating on a different one rules out the model too.
+    const unknownFirstSeenOnModel = new Map<string, number>();
 
     botLogger.info("Starting AI request", {
       model: FALLBACK_MODELS[this.currentModelIndex],
@@ -228,7 +233,7 @@ class GoogleClientRotator {
 
     do {
       const keyStartIndex = this.currentKeyIndex;
-      let modelIsDead = false;
+      let skipRemainingKeys = false;
 
       do {
         try {
@@ -264,6 +269,7 @@ class GoogleClientRotator {
           lastError = error;
           const message =
             error instanceof Error ? error.message : String(error);
+          lastMessage = message;
           lastCategory = categorizeError(error);
 
           const apiError = getAPICallError(error);
@@ -296,13 +302,47 @@ class GoogleClientRotator {
             throw new ImageDownloadError(message);
           }
 
+          // An unidentifiable failure that repeats says where the fault is not,
+          // and each further attempt costs a request the free tier cannot
+          // spare. Same message on the same model means the key is not at
+          // fault, so the remaining keys are skipped and the next model tried.
+          // Same message on a different model means the request itself is
+          // wrong, and nothing further is worth spending - production burned
+          // four models on one repeated "Invalid JSON response", which with a
+          // second key would have been eight.
+          //
+          // Deliberately not applied to rate limits, which are per key and per
+          // model: there, rotating is the entire point and does find quota.
+          if (lastCategory === "unknown") {
+            const firstModel = unknownFirstSeenOnModel.get(message);
+
+            if (firstModel === undefined) {
+              unknownFirstSeenOnModel.set(message, this.currentModelIndex);
+            } else if (firstModel !== this.currentModelIndex) {
+              botLogger.warn(
+                "Same failure on a second model - the request is at fault, stopping",
+                { message },
+              );
+              this.currentModelIndex = startModelIndex;
+              this.currentKeyIndex = startKeyIndex;
+              return null;
+            } else {
+              botLogger.warn(
+                "Same failure on another key - not the key, trying the next model",
+                { message },
+              );
+              skipRemainingKeys = true;
+              break;
+            }
+          }
+
           if (lastCategory === "model_error") {
             // Every key will get the same answer from a model that does not
             // exist, so there is nothing to gain by working through them.
             botLogger.warn("Model unavailable, trying the next one", {
               model: FALLBACK_MODELS[this.currentModelIndex],
             });
-            modelIsDead = true;
+            skipRemainingKeys = true;
             break;
           }
 
@@ -327,7 +367,7 @@ class GoogleClientRotator {
       // All keys exhausted for this model
       // If last error was key_error, don't try other models (same keys will fail)
       // - unless the model itself is the problem, where the keys are fine.
-      if (!modelIsDead && lastCategory === "key_error") {
+      if (!skipRemainingKeys && lastCategory === "key_error") {
         botLogger.warn("All keys invalid, stopping");
         this.currentModelIndex = startModelIndex;
         this.currentKeyIndex = startKeyIndex;

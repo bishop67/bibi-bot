@@ -1,3 +1,5 @@
+<img src="assets/bibi.jpg" alt="bibi" width="120" align="right">
+
 # bibi-bot
 
 A Discord moderation and stats bot. Fork of
@@ -9,7 +11,11 @@ A Discord moderation and stats bot. Fork of
 ### Prerequisites
 
 1. **Discord bot token** from the [Discord Developer Portal](https://discord.com/developers/applications)
-2. **PostgreSQL** database — hosted (Neon and similar work fine) or local
+2. **PostgreSQL** database — hosted or local. Avoid anything that meters
+   _compute time_ rather than resources: the bot holds a connection around the
+   clock, so a serverless database never gets the idle stretch it needs to
+   suspend, and the monthly allowance goes on simply being up. Aiven and
+   Supabase bill for size instead, which suits this workload
 3. **Bun** runtime
 
 The bot also needs the **View Audit Log** permission. Without it kicks, bans and
@@ -42,8 +48,8 @@ timeouts are still logged, but with no moderator or reason attached.
 
 The bot serves two endpoints on port 4000 (`HEALTH_PORT` to change):
 
-| Endpoint        | Purpose                                                                 |
-| --------------- | ----------------------------------------------------------------------- |
+| Endpoint        | Purpose                                                                  |
+| --------------- | ------------------------------------------------------------------------ |
 | `/health`       | Liveness. Touches nothing external, so it is cheap to poll.              |
 | `/health/ready` | Readiness. Adds a database round trip — for deploy checks, not monitors. |
 
@@ -55,13 +61,13 @@ response would never notice.
 
 ### Public
 
-| Command          | Description                                            | Options                   |
-| ---------------- | ------------------------------------------------------ | ------------------------- |
-| `/stats`         | Server and member statistics                           | `type`, `user`, `lookback` |
-| `/warnings`      | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional) |
-| `/report`        | Report a member to the moderators                      | `user`, `reason`          |
-| `/time`          | Current time around the world, or one place            | `location` (optional)     |
-| `/lookback-me`   | Change your own lookback range                         | `lookback`                |
+| Command        | Description                                            | Options                    |
+| -------------- | ------------------------------------------------------ | -------------------------- |
+| `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
+| `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
+| `/report`      | Report a member to the moderators                      | `user`, `reason`           |
+| `/time`        | Current time around the world, or one place            | `location` (optional)      |
+| `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 
 `/stats` takes a `type` of `me`, `member`, `top` or `members`. `user` applies
 only to `member` and `lookback` only to `top` — Discord cannot tie an option to
@@ -88,11 +94,11 @@ one choice, so both are always offered and validated when the command runs.
 | -------------------- | ------------------------------------------ | -------------------------- |
 | `!backfill-messages` | Import existing message history (prefix)   | `--reset`                  |
 | `/clear-warnings`    | Wipe a member's warnings                   | `user`                     |
-| `/logs deleted`     | Deleted message content                    | `count` (optional)         |
-| `/lookback-members` | Change the guild-wide lookback range       | `lookback`                 |
-| `/delete-member-db` | Remove a member from the database          | `user`                     |
-| `/audit-roles`      | Audit roles for elevated permissions       |                            |
-| `/troll-move-user`  | Move a member between empty voice channels | `user`, `count`, `timeout` |
+| `/logs deleted`      | Deleted message content                    | `count` (optional)         |
+| `/lookback-members`  | Change the guild-wide lookback range       | `lookback`                 |
+| `/delete-member-db`  | Remove a member from the database          | `user`                     |
+| `/audit-roles`       | Audit roles for elevated permissions       |                            |
+| `/troll-move-user`   | Move a member between empty voice channels | `user`, `count`, `timeout` |
 
 `defaultMemberPermissions` is only a default. Discord lets you override any
 command per role under **Server Settings → Integrations → bibi → Command
@@ -138,10 +144,10 @@ their messages on its own. Moderators can still act on them by hand.
 members.** Jailing otherwise deletes the member's last 14 days of messages in
 every channel, and none of it comes back.
 
-| List                      | Applies to                                    |
-| ------------------------- | --------------------------------------------- |
-| `DELETE_NEVER_CHANNELS`   | Everyone. Never swept.                        |
-| `DELETE_EXEMPT_CHANNELS`  | Only members holding a `DELETE_EXEMPT_ROLES` role. |
+| List                     | Applies to                                         |
+| ------------------------ | -------------------------------------------------- |
+| `DELETE_NEVER_CHANNELS`  | Everyone. Never swept.                             |
+| `DELETE_EXEMPT_CHANNELS` | Only members holding a `DELETE_EXEMPT_ROLES` role. |
 
 So a long-standing member keeps their contributions to the channels that
 matter, while a raider holding nothing but the base member role has everything
@@ -195,8 +201,8 @@ The ones worth knowing:
 
 | Variable                     | Effect when unset                                        |
 | ---------------------------- | -------------------------------------------------------- |
-| `GUILD_ID`                   | Required. Comma-separated for multiple servers.           |
-| `STATUS_ROLES`               | Needs a `jail` entry or jailing silently does nothing.    |
+| `GUILD_ID`                   | Required. Comma-separated for multiple servers.          |
+| `STATUS_ROLES`               | Needs a `jail` entry or jailing silently does nothing.   |
 | `STAFF_ROLES`                | No staff exemption from automated punishment.            |
 | `LOG_EXEMPT_CHANNELS`        | Everything is logged, staff channels included.           |
 | `DELETE_EXEMPT_CHANNELS`     | Jailing sweeps every channel, announcements included.    |

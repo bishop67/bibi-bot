@@ -8,10 +8,10 @@
     "dev": "tsx watch src/main.ts",
     "build": "tsup && tsc --emitDeclarationOnly",
     "prettier": "prettier -w .",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:introspect": "drizzle-kit introspect"
+    "db:push": "dotenvx run -- drizzle-kit push",
+    "db:generate": "dotenvx run -- drizzle-kit generate",
+    "db:migrate": "dotenvx run -- drizzle-kit migrate",
+    "db:introspect": "dotenvx run -- drizzle-kit introspect"
   },
   "dependencies": {
     "@ai-sdk/google": "4.0.45",

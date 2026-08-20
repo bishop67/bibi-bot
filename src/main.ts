@@ -2,6 +2,7 @@ import "@dotenvx/dotenvx/config";
 
 import { MemberUpdateQueueService } from "@/core/services/members/member-update-queue.service";
 import { MembersService } from "@/core/services/members/members.service";
+import { PresenceWriterService } from "@/core/services/members/presence-writer.service";
 import { MessagesService } from "@/core/services/messages/messages.service";
 import { migrationsReady } from "@/lib/db";
 import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
@@ -78,6 +79,7 @@ bot.once("clientReady", async () => {
   await bot.initApplicationCommands();
   if (BACKGROUND_WORKERS_ENABLED) {
     MemberUpdateQueueService.start();
+    PresenceWriterService.start();
   } else {
     botLogger.warn(
       "Background workers disabled: member updates will queue up and never be applied, so display names, avatars and roles will stay empty",
@@ -204,6 +206,7 @@ process.on("uncaughtException", (err) => {
 process.on("SIGTERM", async () => {
   botLogger.info("Received SIGTERM, shutting down");
   MemberUpdateQueueService.stop();
+  await PresenceWriterService.stop();
   await shutdownTelemetry();
   process.exit(0);
 });
@@ -211,6 +214,7 @@ process.on("SIGTERM", async () => {
 process.on("SIGINT", async () => {
   botLogger.info("Received SIGINT, shutting down");
   MemberUpdateQueueService.stop();
+  await PresenceWriterService.stop();
   await shutdownTelemetry();
   process.exit(0);
 });

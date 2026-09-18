@@ -2,13 +2,7 @@
   <img src="assets/bibi.jpg" alt="bibi" width="250">
 </p>
 
-# bibi-bot
-
-
-A Discord moderation and stats bot. Fork of
-[0-don/coding.global-bot](https://github.com/0-don/coding.global-bot) — see
-[NOTICE](NOTICE) for what that means for reuse.
-
+<h1 align="center"> bibi-bot </h1>
 
 ## Setup
 
@@ -219,6 +213,13 @@ The ones worth knowing:
 Role and channel names are matched **exactly**. On boot the bot checks each
 configured name against every guild and reports what does not resolve — worth
 reading, because a name that does not match fails silently otherwise.
+
+
+## Attribution
+
+A Discord moderation and stats bot. Fork of
+[0-don/coding.global-bot](https://github.com/0-don/coding.global-bot) — see
+[NOTICE](NOTICE) for what that means for reuse.
 
 ## Licence
 

@@ -1,10 +1,14 @@
-<img src="assets/bibi.jpg" alt="bibi" width="120" align="right">
+<p align="center">
+  <img src="assets/bibi.jpg" alt="bibi" width="250">
+</p>
 
 # bibi-bot
+
 
 A Discord moderation and stats bot. Fork of
 [0-don/coding.global-bot](https://github.com/0-don/coding.global-bot) — see
 [NOTICE](NOTICE) for what that means for reuse.
+
 
 ## Setup
 

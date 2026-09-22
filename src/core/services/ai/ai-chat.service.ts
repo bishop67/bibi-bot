@@ -62,30 +62,49 @@ export class AiChatService {
     const messageImages = await extractImageUrls(message);
     const allImages = [...messageImages, ...repliedImages];
 
-    let userMessage = this.buildUserMessage(fullMessage, allImages);
-    const messages = channelMessages.get(message.channel.id) || [];
-    messages.push(userMessage);
+    const channelId = message.channel.id;
+    const userMessage = this.buildUserMessage(fullMessage, allImages);
+
+    // A working copy, committed to the cache only once a reply comes back.
+    // This used to push straight into the cached array, so a request that
+    // failed left its message behind with no reply - and a message that made
+    // the request fail (an image, a blocked prompt, sheer size) then rode along
+    // on every later request in that channel and failed those too. The bot
+    // went silent in its busiest channel while quiet ones, with no history,
+    // kept working, and only a restart cleared it.
+    const messages = [...(channelMessages.get(channelId) || []), userMessage];
 
     // Compact older history into a running summary once it exceeds the window.
-    await this.compactHistory(message.channel.id, messages);
+    let summary = channelSummaries.get(channelId);
+    summary = (await this.compactHistory(summary, messages)) ?? summary;
 
-    const summary = channelSummaries.get(message.channel.id);
-    const contextMessages: ModelMessage[] = summary
-      ? [
-          {
-            role: "system",
-            content: `Previous conversation summary:\n${summary}`,
-          },
-          ...messages,
-        ]
-      : [...messages];
+    // Compaction failing - quota, a busy model - used to leave the history
+    // untrimmed, so it grew with every message until the requests themselves
+    // were too big to succeed. Dropping the oldest beats never answering.
+    if (messages.length > SUMMARY_WINDOW * 2) {
+      messages.splice(0, messages.length - SUMMARY_WINDOW);
+    }
+
+    // Built per attempt, so the retry without images sees the stripped
+    // messages. It used to close over a copy taken before stripping, and so
+    // resent the very images that had just failed to download.
+    const buildContext = (): ModelMessage[] =>
+      summary
+        ? [
+            {
+              role: "system",
+              content: `Previous conversation summary:\n${summary}`,
+            },
+            ...messages,
+          ]
+        : [...messages];
 
     const runAI = async () => {
       return googleClient.executeWithRotation(async (model) => {
         return generateText({
           model,
           system: CHAT_SYSTEM_PROMPT,
-          messages: contextMessages,
+          messages: buildContext(),
           tools,
           stopWhen: stepCountIs(3),
           maxOutputTokens: 1024,
@@ -100,11 +119,10 @@ export class AiChatService {
     } catch (error) {
       if (error instanceof ImageDownloadError) {
         botLogger.warn("Retrying AI request without images");
-        userMessage = this.buildUserMessage(fullMessage, []);
         for (let i = 0; i < messages.length; i++) {
           messages[i] = this.stripImagesFromMessage(messages[i]);
         }
-        messages[messages.length - 1] = userMessage;
+        messages[messages.length - 1] = this.buildUserMessage(fullMessage, []);
         result = await runAI();
       } else {
         throw error;
@@ -126,7 +144,8 @@ export class AiChatService {
     });
 
     messages.push({ role: "assistant", content: responseText });
-    channelMessages.set(message.channel.id, messages);
+    channelMessages.set(channelId, messages);
+    if (summary) channelSummaries.set(channelId, summary);
 
     return {
       text: responseText,
@@ -144,15 +163,20 @@ export class AiChatService {
       .trim();
   }
 
+  /**
+   * Folds everything older than the window into the summary, trimming
+   * `messages` in place. Returns the new summary, or undefined when there was
+   * nothing to compact or the model failed - the caller commits it, alongside
+   * the messages, only once the reply itself succeeds.
+   */
   private static async compactHistory(
-    channelId: string,
+    previousSummary: string | undefined,
     messages: ModelMessage[],
-  ): Promise<void> {
-    if (messages.length <= SUMMARY_WINDOW) return;
+  ): Promise<string | undefined> {
+    if (messages.length <= SUMMARY_WINDOW) return undefined;
 
     const tail = messages.slice(0, messages.length - SUMMARY_WINDOW);
     const kept = messages.slice(messages.length - SUMMARY_WINDOW);
-    const previousSummary = channelSummaries.get(channelId);
 
     const tailText = tail
       .map((msg) => {
@@ -191,17 +215,17 @@ export class AiChatService {
 
       const updated = result?.text?.trim();
       if (updated) {
-        channelSummaries.set(channelId, updated);
         // Replace the full history with just the recent window.
         messages.length = 0;
         messages.push(...kept);
-        channelMessages.set(channelId, messages);
+        return updated;
       }
     } catch (error) {
       botLogger.error("Failed to compact chat history", {
         error: String(error),
       });
     }
+    return undefined;
   }
 
   private static buildUserMessage(

@@ -5,7 +5,8 @@ import { MembersService } from "@/core/services/members/members.service";
 import { PresenceWriterService } from "@/core/services/members/presence-writer.service";
 import { MessagesService } from "@/core/services/messages/messages.service";
 import { migrationsReady } from "@/lib/db";
-import { botLogger, shutdownTelemetry } from "@/lib/telemetry";
+import { shutdown } from "@/lib/shutdown";
+import { botLogger } from "@/lib/telemetry";
 import {
   BACKGROUND_WORKERS_ENABLED,
   PRIVILEGED_INTENTS_ENABLED,
@@ -203,21 +204,8 @@ process.on("uncaughtException", (err) => {
 });
 
 // Graceful shutdown
-process.on("SIGTERM", async () => {
-  botLogger.info("Received SIGTERM, shutting down");
-  MemberUpdateQueueService.stop();
-  await PresenceWriterService.stop();
-  await shutdownTelemetry();
-  process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-  botLogger.info("Received SIGINT, shutting down");
-  MemberUpdateQueueService.stop();
-  await PresenceWriterService.stop();
-  await shutdownTelemetry();
-  process.exit(0);
-});
+process.on("SIGTERM", () => void shutdown("SIGTERM", 0));
+process.on("SIGINT", () => void shutdown("SIGINT", 0));
 
 const main = async () => {
   if (!token) {

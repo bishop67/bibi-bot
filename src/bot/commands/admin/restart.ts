@@ -13,7 +13,7 @@ import { Discord, Slash } from "discordx";
 export class Restart {
   @Slash({
     name: "restart",
-    description: "Restart the bot through the hosting panel",
+    description: "Restart the bot and pull the latest code",
     defaultMemberPermissions: PermissionFlagsBits.Administrator,
     dmPermission: false,
   })

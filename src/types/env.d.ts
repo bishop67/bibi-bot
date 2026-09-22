@@ -50,6 +50,11 @@ interface FeatureBotEnvironment {
   // Admin API
   ADMIN_API_KEY: string;
 
+  // Hosting panel (for /restart)
+  PANEL_URL: string;
+  PANEL_API_KEY: string;
+  PANEL_SERVER_ID: string;
+
   // ModLog
   MOD_LOG_CHANNELS: string;
 

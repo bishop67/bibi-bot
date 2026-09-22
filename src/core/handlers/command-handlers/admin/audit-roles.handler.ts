@@ -1,4 +1,4 @@
-import { BOT_OWNER_ID } from "@/shared/config/roles";
+import { isBotOwner } from "@/shared/config/roles";
 import type { CommandInteraction } from "discord.js";
 import { PermissionFlagsBits } from "discord.js";
 
@@ -34,8 +34,14 @@ const ELEVATED_PERMISSIONS = [
 export async function executeAuditRoles(
   interaction: CommandInteraction,
 ): Promise<string> {
-  if (interaction.user.id !== BOT_OWNER_ID) {
-    return "This command is restricted to the bot owner.";
+  // Owner-only used to lock out every administrator, though Discord already
+  // gates the command on Administrator. Re-checked because a server can hand
+  // any role the command under Integrations.
+  if (
+    !isBotOwner(interaction.user.id) &&
+    !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+  ) {
+    return "This command is restricted to administrators.";
   }
 
   const guild = interaction.guild;

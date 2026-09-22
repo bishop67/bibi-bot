@@ -1,7 +1,7 @@
 import { MoveMemberToChannelService } from "@/core/services/members/move-member-to-channel.service";
 import { db } from "@/lib/db";
 import { memberGuild } from "@/lib/db-schema";
-import { BOT_OWNER_ID } from "@/shared/config/roles";
+import { isBotOwner } from "@/shared/config/roles";
 import type { CommandInteraction, User } from "discord.js";
 import { ChannelType, VoiceChannel } from "discord.js";
 import { and, eq } from "drizzle-orm";
@@ -16,11 +16,11 @@ export async function executeTrollMoveUser(
     return "This command can only be used in a server";
   }
 
-  if (user.id === BOT_OWNER_ID && interaction.user.id !== BOT_OWNER_ID) {
+  if (isBotOwner(user.id) && !isBotOwner(interaction.user.id)) {
     return "You can't troll me";
   }
 
-  if (interaction.user.id === user.id && user.id !== BOT_OWNER_ID) {
+  if (interaction.user.id === user.id && !isBotOwner(user.id)) {
     return "You can't troll yourself";
   }
 

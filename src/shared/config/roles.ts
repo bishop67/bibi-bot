@@ -1,6 +1,10 @@
 // Role configurations parsed from environment variables
 
-export const BOT_OWNER_ID = "1442896083326865428";
+export const BOT_OWNER_IDS = ["1442896083326865428", "1408427027756748866"];
+
+export function isBotOwner(userId: string | undefined): boolean {
+  return !!userId && BOT_OWNER_IDS.includes(userId);
+}
 
 export const STAFF_ROLES =
   process.env.STAFF_ROLES?.split(",").map((s) => s.trim()) || [];

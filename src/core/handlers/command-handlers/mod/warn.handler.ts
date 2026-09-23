@@ -1,5 +1,8 @@
+import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
+import { isJailWarning, nextJailWarning } from "@/shared/config/moderation";
+import { isStaffMember } from "@/shared/config/staff";
 import type { MessageResult } from "@/types";
 import type { CommandInteraction, User } from "discord.js";
 
@@ -25,8 +28,8 @@ export async function executeWarn(
   }
 
   // Discord gates this command on ManageRoles, which every moderator has - so
-  // without a rank check the newest of them can warn an admin, and at four
-  // warnings the automod would try to jail them.
+  // without a rank check the newest of them can warn an admin, and every third
+  // warning jails.
   const [targetMember, invoker] = await Promise.all([
     interaction.guild.members.fetch(target.id).catch(() => null),
     interaction.guild.members.fetch(interaction.user.id).catch(() => null),
@@ -43,7 +46,7 @@ export async function executeWarn(
     };
   }
 
-  const { warning } = await WarningsService.addWarning({
+  const { warning, warningCount } = await WarningsService.addWarning({
     guildId: interaction.guild.id,
     memberId: target.id,
     username: target.username,
@@ -62,15 +65,41 @@ export async function executeWarn(
     reason,
   });
 
+  // Same threshold as the invite filter, since both feed one count. Staff are
+  // exempt, as with every automatic jail. No message purge: a warning for
+  // rudeness is no reason to wipe two weeks of posts.
+  const staff = isStaffMember(targetMember);
+  const jailed =
+    isJailWarning(warningCount) &&
+    !staff &&
+    !(
+      await DeleteUserMessagesService.jailUser({
+        guild: interaction.guild,
+        memberId: target.id,
+        user: target,
+        jail: true,
+        deleteMessages: false,
+        moderatorId: interaction.user.id,
+        moderatorName: interaction.user.username,
+        reason: `Reached ${warningCount} warnings (latest: ${reason})`,
+      })
+    ).alreadyJailed;
+
   try {
     await target.send(
-      `You have been warned in **${interaction.guild.name}**: ${reason}`,
+      jailed
+        ? `You have been warned in **${interaction.guild.name}**: ${reason}\nThat is ${warningCount} warnings, so you have been jailed. Ask a mod to release you.`
+        : staff
+          ? `You have been warned in **${interaction.guild.name}**: ${reason}\nWarnings: ${warningCount}.`
+          : `You have been warned in **${interaction.guild.name}**: ${reason}\nWarnings: ${warningCount}, you will be jailed at ${nextJailWarning(warningCount)}.`,
     );
   } catch {
     // user has DMs closed or has left - warning is still recorded
   }
 
   return {
-    message: `Warned ${target.username} (warning #${warning.id}): ${reason}`,
+    message: jailed
+      ? `Warned ${target.username} (warning #${warning.id}): ${reason}\nThat is warning ${warningCount}, so they have been jailed.`
+      : `Warned ${target.username} (warning #${warning.id}, ${warningCount} total): ${reason}`,
   };
 }

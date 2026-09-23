@@ -58,10 +58,10 @@ export class RolesService {
    * it. Taking both sides from the database clock also removes any skew between
    * this process and Postgres.
    */
-  private static async alreadyLoggedRecently(
+  static async alreadyLoggedRecently(
     guildId: string,
     targetId: string,
-    action: "jail" | "unjail",
+    action: "jail" | "unjail" | "timeout" | "untimeout",
   ): Promise<boolean> {
     const [recent] = await db
       .select({ id: modLog.id })

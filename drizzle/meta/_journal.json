@@ -50,6 +50,13 @@
       "when": 1787047152143,
       "tag": "0006_drop_privacy_opt_out_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790177261442,
+      "tag": "0007_add_member_mute",
+      "breakpoints": true
     }
   ]
 }

@@ -71,6 +71,9 @@ export async function handleGuildMemberUpdate(
  * Discord has no dedicated timeout event - a timeout is just a field change on
  * guildMemberUpdate, so it has to be spotted by comparing the two members and
  * then attributed via the audit log.
+ *
+ * /timeout and /untimeout write their own entry naming the moderator, so
+ * changes the bot made are skipped here rather than logged a second time.
  */
 async function logTimeoutChange(
   oldMember: GuildMember | PartialGuildMember,
@@ -88,15 +91,29 @@ async function logTimeoutChange(
 
   if (!isActive && !wasActive) return;
 
+  const action = isActive ? "timeout" : "untimeout";
+
   const actor = await findAuditActor(
     newMember.guild,
     AuditLogEvent.MemberUpdate,
     newMember.id,
   );
 
+  const botId = newMember.client.user?.id;
+  if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
+
+  if (
+    await RolesService.alreadyLoggedRecently(
+      newMember.guild.id,
+      newMember.id,
+      action,
+    )
+  )
+    return;
+
   await ModLogService.postLog({
     guild: newMember.guild,
-    action: isActive ? "timeout" : "untimeout",
+    action,
     targetId: newMember.id,
     targetName: newMember.user.username,
     moderatorId: actor?.moderatorId,

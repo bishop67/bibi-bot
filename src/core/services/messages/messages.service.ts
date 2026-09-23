@@ -4,6 +4,7 @@ import { ServerLogService } from "@/core/services/logging/server-log.service";
 import { findMessageDeleteActor } from "@/core/services/moderation/audit-log";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
+import { isJailWarning, nextJailWarning } from "@/shared/config/moderation";
 import { isStaffMember } from "@/shared/config/staff";
 import { botLogger } from "@/lib/telemetry";
 import { db } from "@/lib/db";
@@ -505,10 +506,16 @@ export class MessagesService {
       reason: `${reason} (warning ${currentWarnings})`,
     });
 
-    if (currentWarnings < 4) {
+    // Staff are never auto-jailed (see jailAndDeleteMessages), so telling them
+    // they have been jailed, or when they will be, would be untrue.
+    const staff = isStaffMember(member);
+
+    if (!isJailWarning(currentWarnings) || staff) {
       try {
         await member.send(
-          `Stop posting invites, you have been warned. Warnings: ${currentWarnings}, you will be muted at 3 warnings.`,
+          staff
+            ? `Stop posting invites, you have been warned. Warnings: ${currentWarnings}.`
+            : `Stop posting invites, you have been warned. Warnings: ${currentWarnings}, you will be jailed at ${nextJailWarning(currentWarnings)} warnings.`,
         );
       } catch (error) {}
     } else {
@@ -522,7 +529,9 @@ export class MessagesService {
       });
 
       try {
-        await member.send(`You have been muted asks a mod to unmute you.`);
+        await member.send(
+          `You have been jailed after ${currentWarnings} warnings. Ask a mod to release you.`,
+        );
       } catch (error) {}
     }
 

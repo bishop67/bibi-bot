@@ -16,10 +16,7 @@ import {
   VOICE_ONLY,
 } from "@/shared/config/roles";
 import { ConfigValidator } from "@/shared/config/validator";
-import {
-  AuditLogEvent,
-  findAuditActor,
-} from "@/core/services/moderation/audit-log";
+import { findRoleChangeActor } from "@/core/services/moderation/audit-log";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
 import type { HandleHelperReactionParams, UpdateDbRolesArgs } from "@/types";
 import {
@@ -95,11 +92,20 @@ export class RolesService {
   private static async logManualJail(
     newMember: GuildMember | PartialGuildMember,
   ) {
-    const actor = await findAuditActor(
-      newMember.guild,
-      AuditLogEvent.MemberRoleUpdate,
-      newMember.id,
-    );
+    const jailRoleId = newMember.guild.roles.cache.find(
+      (role) => role.name === JAIL,
+    )?.id;
+
+    // Matched on the jail role itself: the newest role update for the member
+    // is often the bot stripping their other roles in response.
+    const actor = jailRoleId
+      ? await findRoleChangeActor(
+          newMember.guild,
+          newMember.id,
+          jailRoleId,
+          "$add",
+        )
+      : null;
 
     const botId = newMember.client.user?.id;
     if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
@@ -120,6 +126,7 @@ export class RolesService {
       targetName: newMember.user.username,
       moderatorId: actor?.moderatorId,
       moderatorName: actor?.moderatorName,
+      moderatorFromAuditLog: true,
       reason: actor?.reason ?? "Jail role applied manually",
     });
   }
@@ -140,11 +147,20 @@ export class RolesService {
   private static async logManualUnjail(
     newMember: GuildMember | PartialGuildMember,
   ) {
-    const actor = await findAuditActor(
-      newMember.guild,
-      AuditLogEvent.MemberRoleUpdate,
-      newMember.id,
-    );
+    const jailRoleId = newMember.guild.roles.cache.find(
+      (role) => role.name === JAIL,
+    )?.id;
+
+    // Matched on the jail role itself: the newest role update for the member
+    // is often the bot stripping their other roles in response.
+    const actor = jailRoleId
+      ? await findRoleChangeActor(
+          newMember.guild,
+          newMember.id,
+          jailRoleId,
+          "$remove",
+        )
+      : null;
 
     const botId = newMember.client.user?.id;
     if (actor?.moderatorId && botId && actor.moderatorId === botId) return;
@@ -165,6 +181,7 @@ export class RolesService {
       targetName: newMember.user.username,
       moderatorId: actor?.moderatorId,
       moderatorName: actor?.moderatorName,
+      moderatorFromAuditLog: true,
       reason: actor?.reason ?? "Jail role removed manually",
     });
   }

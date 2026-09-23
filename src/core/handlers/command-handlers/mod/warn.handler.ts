@@ -35,6 +35,12 @@ export async function executeWarn(
     interaction.guild.members.fetch(interaction.user.id).catch(() => null),
   ]);
 
+  // Without the invoker's roles there is nothing to compare, and letting the
+  // warning through would let anyone reach the jail threshold on an admin.
+  if (targetMember && !invoker) {
+    return { error: "I could not check your roles, so I have not warned anyone." };
+  }
+
   if (
     targetMember &&
     invoker &&
@@ -69,11 +75,17 @@ export async function executeWarn(
   // exempt, as with every automatic jail. No message purge: a warning for
   // rudeness is no reason to wipe two weeks of posts.
   const staff = isStaffMember(targetMember);
-  const jailed =
-    isJailWarning(warningCount) &&
-    !staff &&
-    !(
-      await DeleteUserMessagesService.jailUser({
+  let jailNote = "";
+  let jailed = false;
+
+  if (isJailWarning(warningCount) && !staff) {
+    // Checked here rather than left to jailUser: the jail role would land but
+    // the roles above the bot's could not be stripped, half-jailing them.
+    if (targetMember && !targetMember.manageable) {
+      jailNote = `
+That is warning ${warningCount}, but I cannot jail them: their highest role is above mine.`;
+    } else {
+      const { status } = await DeleteUserMessagesService.jailUser({
         guild: interaction.guild,
         memberId: target.id,
         user: target,
@@ -82,24 +94,37 @@ export async function executeWarn(
         moderatorId: interaction.user.id,
         moderatorName: interaction.user.username,
         reason: `Reached ${warningCount} warnings (latest: ${reason})`,
-      })
-    ).alreadyJailed;
+      });
+
+      jailed = status === "jailed";
+      jailNote =
+        status === "jailed"
+          ? `
+That is warning ${warningCount}, so they have been jailed.`
+          : status === "already-jailed"
+            ? `
+That is warning ${warningCount}; they were already jailed.`
+            : `
+That is warning ${warningCount}, but this server has no jail role configured, so they were not jailed.`;
+    }
+  }
 
   try {
     await target.send(
       jailed
-        ? `You have been warned in **${interaction.guild.name}**: ${reason}\nThat is ${warningCount} warnings, so you have been jailed. Ask a mod to release you.`
-        : staff
-          ? `You have been warned in **${interaction.guild.name}**: ${reason}\nWarnings: ${warningCount}.`
-          : `You have been warned in **${interaction.guild.name}**: ${reason}\nWarnings: ${warningCount}, you will be jailed at ${nextJailWarning(warningCount)}.`,
+        ? `You have been warned in **${interaction.guild.name}**: ${reason}
+That is ${warningCount} warnings, so you have been jailed. Ask a mod to release you.`
+        : staff || isJailWarning(warningCount)
+          ? `You have been warned in **${interaction.guild.name}**: ${reason}
+Warnings: ${warningCount}.`
+          : `You have been warned in **${interaction.guild.name}**: ${reason}
+Warnings: ${warningCount}, you will be jailed at ${nextJailWarning(warningCount)}.`,
     );
   } catch {
     // user has DMs closed or has left - warning is still recorded
   }
 
   return {
-    message: jailed
-      ? `Warned ${target.username} (warning #${warning.id}): ${reason}\nThat is warning ${warningCount}, so they have been jailed.`
-      : `Warned ${target.username} (warning #${warning.id}, ${warningCount} total): ${reason}`,
+    message: `Warned ${target.username} (warning #${warning.id}, ${warningCount} total): ${reason}${jailNote}`,
   };
 }

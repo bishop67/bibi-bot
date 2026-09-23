@@ -94,6 +94,7 @@ export class ModLogService {
     targetUser,
     moderatorId,
     moderatorName,
+    moderatorFromAuditLog,
     reason,
   }: {
     guild: Guild;
@@ -104,6 +105,11 @@ export class ModLogService {
     targetUser?: User | null;
     moderatorId?: string;
     moderatorName?: string;
+    /**
+     * The moderator came from an audit-log lookup, so a missing one means
+     * "could not tell who", not the automod.
+     */
+    moderatorFromAuditLog?: boolean;
     reason?: string;
   }) {
     try {
@@ -134,7 +140,9 @@ export class ModLogService {
               `**Moderator:** ${
                 moderatorId
                   ? `<@${moderatorId}> (${moderatorName ?? "unknown"})`
-                  : "Automod"
+                  : moderatorFromAuditLog
+                    ? "Unknown (needs View Audit Log)"
+                    : "Automod"
               }`,
               `**Reason:** ${reason || "No reason provided"}`,
               `-# ${targetId}`,

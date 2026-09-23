@@ -85,11 +85,19 @@ export async function executeJail(
   // Deliberately not marked `automated`, so a moderator can still jail a
   // staff member by hand even though the filters never will - subject to
   // outranking them, which refuseByRank has already established.
-  const { alreadyJailed } = await DeleteUserMessagesService.jailUser(params);
+  const { status } = await DeleteUserMessagesService.jailUser(params);
+
+  if (status === "no-jail-role") {
+    return {
+      success: false,
+      error:
+        "This server has no jail role configured (check STATUS_ROLES), so nobody was jailed.",
+    };
+  }
 
   // Refused rather than repeated: a second jail cannot punish them further,
   // but its sweep would delete the protected channels the first one spared.
-  if (alreadyJailed) {
+  if (status === "already-jailed") {
     return {
       success: false,
       error:

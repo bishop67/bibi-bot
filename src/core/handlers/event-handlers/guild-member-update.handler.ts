@@ -93,10 +93,14 @@ async function logTimeoutChange(
 
   const action = isActive ? "timeout" : "untimeout";
 
+  // Only timeout changes count: MemberUpdate also covers nickname and other
+  // edits, and one of those may be the newest entry for this member.
   const actor = await findAuditActor(
     newMember.guild,
     AuditLogEvent.MemberUpdate,
     newMember.id,
+    (entry) =>
+      entry.changes.some((c) => c.key === "communication_disabled_until"),
   );
 
   const botId = newMember.client.user?.id;
@@ -118,6 +122,7 @@ async function logTimeoutChange(
     targetName: newMember.user.username,
     moderatorId: actor?.moderatorId,
     moderatorName: actor?.moderatorName,
+    moderatorFromAuditLog: true,
     reason: isActive
       ? `${actor?.reason ?? "No reason provided"} (until <t:${Math.floor((after as number) / 1000)}:f>)`
       : actor?.reason,

@@ -66,8 +66,10 @@ export class DeleteUserMessagesService {
   static async jailAndDeleteMessages(params: DeleteUserMessagesParams) {
     if (params.automated && (await this.isAutoJailExempt(params))) return;
 
-    const { alreadyJailed } = await this.jailUser(params);
-    if (alreadyJailed) return;
+    // A missing jail role still lets the sweep run: the filters decided this
+    // member is spamming, and removing the spam does not need the role.
+    const { status } = await this.jailUser(params);
+    if (status === "already-jailed") return;
 
     if (params.deleteMessages === false) return;
     this.deleteUserMessages(params).catch(error);
@@ -112,10 +114,12 @@ export class DeleteUserMessagesService {
    * therefore clear the protected channels the first one deliberately spared,
    * unrecoverably. Refusing is the only outcome consistent with the first
    * jail; to widen the deletion window, unjail first.
+   *
+   * "no-jail-role" means nothing happened, and callers must not report a jail.
    */
   static async jailUser(
     params: DeleteUserMessagesParams,
-  ): Promise<{ alreadyJailed: boolean }> {
+  ): Promise<{ status: "jailed" | "already-jailed" | "no-jail-role" }> {
     const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]?.id;
 
     // Returning quietly here means a spammer the filters already decided to
@@ -131,7 +135,7 @@ export class DeleteUserMessagesService {
           reason: params.reason,
         },
       );
-      return { alreadyJailed: false };
+      return { status: "no-jail-role" };
     }
 
     const memberId = params.user?.id || params.memberId;
@@ -145,7 +149,7 @@ export class DeleteUserMessagesService {
         memberId,
         reason: params.reason,
       });
-      return { alreadyJailed: true };
+      return { status: "already-jailed" };
     }
 
     // Read before the role is applied: adding it makes the status-role handler
@@ -194,7 +198,7 @@ export class DeleteUserMessagesService {
 
     await this.sendJailNotification(params);
 
-    return { alreadyJailed: false };
+    return { status: "jailed" };
   }
 
   /**
@@ -231,8 +235,41 @@ export class DeleteUserMessagesService {
       params.guild.members.cache.get(params.memberId) ||
       (await params.guild.members.fetch(params.memberId).catch(() => null));
 
+    // /jail works on members who have left - the jail row is re-applied if they
+    // rejoin - so releasing them has to work the same way: clear the row.
     if (!discordMember) {
-      return { ok: false, message: "That member is not in the server." };
+      const cleared = await db
+        .delete(memberRole)
+        .where(
+          and(
+            eq(memberRole.memberId, params.memberId),
+            eq(memberRole.guildId, params.guild.id),
+            eq(memberRole.roleId, jailRoleId),
+          ),
+        )
+        .returning({ roleId: memberRole.roleId });
+
+      if (!cleared.length) {
+        return {
+          ok: false,
+          message: "That member is not in the server and has no jail on record.",
+        };
+      }
+
+      await ModLogService.postLog({
+        guild: params.guild,
+        action: "unjail",
+        targetId: params.memberId,
+        targetName: params.user?.username,
+        moderatorId: params.moderatorId,
+        moderatorName: params.moderatorName,
+        reason: params.reason,
+      });
+
+      return {
+        ok: true,
+        message: `<@${params.memberId}> is not in the server. Their jail record is cleared, so it will not be re-applied if they rejoin.`,
+      };
     }
 
     if (!discordMember.roles.cache.has(jailRoleId)) {

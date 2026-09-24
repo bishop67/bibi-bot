@@ -63,7 +63,7 @@ response would never notice.
 | -------------- | ------------------------------------------------------ | -------------------------- |
 | `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
 | `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
-| `/report`      | Report a member to the moderators (posts to the mod log channel) | `user`, `reason` |
+| `/report`      | Anonymously report a member to the moderators          | `user`, `reason`           |
 | `/time`        | Current time around the world, or one place            | `location` (optional)      |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 
@@ -185,7 +185,7 @@ purges their messages; one from `/warn` does not. Staff are exempt, as above.
 
 **Timeouts are tiered.** `/timeout` is not gated on a Discord permission: the
 role check is. `STAFF_ROLES` can time out for up to 28 days, `HELPER_ROLES` for
-up to a week. Nobody can time out staff, helpers cannot time out helpers, and
+up to a day. Nobody can time out staff, helpers cannot time out helpers, and
 a helper can only change or lift a timeout they set themselves.
 
 ## Logging

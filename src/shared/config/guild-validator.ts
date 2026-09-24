@@ -4,6 +4,7 @@ import {
   DELETE_NEVER_CHANNELS,
   LOG_EXEMPT_CHANNELS,
   MOD_LOG_CHANNELS,
+  REPORT_CHANNELS,
 } from "@/shared/config/channels";
 import {
   DELETE_EXEMPT_ROLES,
@@ -65,7 +66,8 @@ function findGuildProblems(guild: Guild): string[] {
 
   const channelNames = new Set(guild.channels.cache.map((c) => c.name));
   const channelChecks: [string, string[]][] = [
-    ["moderation log and member reports", MOD_LOG_CHANNELS],
+    ["moderation log", MOD_LOG_CHANNELS],
+    ["member reports", REPORT_CHANNELS],
   ];
 
   // These are candidate lists - the bot uses the first name that matches - so

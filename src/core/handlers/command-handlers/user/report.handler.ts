@@ -1,5 +1,5 @@
 import { simpleEmbedExample } from "@/core/embeds/simple.embed";
-import { MOD_LOG_CHANNELS } from "@/shared/config/channels";
+import { REPORT_CHANNELS } from "@/shared/config/channels";
 import { ConfigValidator } from "@/shared/config/validator";
 import type { MessageResult } from "@/types";
 import type { CommandInteraction, TextChannel, User } from "discord.js";
@@ -54,9 +54,8 @@ export async function executeReport(
     };
   }
 
-  // Reports share the mod log channel, so staff watch one place.
-  if (!ConfigValidator.isFeatureEnabled("MOD_LOG_CHANNELS")) {
-    ConfigValidator.logFeatureDisabled("Member Reports", "MOD_LOG_CHANNELS");
+  if (!ConfigValidator.isFeatureEnabled("REPORT_CHANNELS")) {
+    ConfigValidator.logFeatureDisabled("Member Reports", "REPORT_CHANNELS");
     return {
       error:
         "Reports aren't configured on this server yet. Please contact a mod directly.",
@@ -64,7 +63,7 @@ export async function executeReport(
   }
 
   const reportChannel = interaction.guild.channels.cache.find(({ name }) =>
-    MOD_LOG_CHANNELS.includes(name),
+    REPORT_CHANNELS.includes(name),
   );
 
   if (!reportChannel || !reportChannel.isTextBased()) {
@@ -74,12 +73,15 @@ export async function executeReport(
     };
   }
 
+  // Anonymous: the reporter is not named here or anywhere else.
   const reportEmbed = simpleEmbedExample();
   reportEmbed.description =
-    `**Reported user:** ${target} (${target.username})\n` +
-    `**Reported by:** ${interaction.member} (${interaction.member?.user.username})\n\n` +
+    `**Reported user:** ${target} (${target.username})\n\n` +
     `**Reason:**\n${reason}`;
-  reportEmbed.footer!.text = "report";
+  reportEmbed.footer!.text = "anonymous report";
+
+  // Set before the send so reports fired together cannot all pass the check.
+  lastReportAt.set(cooldownKey, now);
 
   try {
     await (reportChannel as TextChannel).send({
@@ -87,14 +89,15 @@ export async function executeReport(
       allowedMentions: { users: [], roles: [] },
     });
   } catch {
-    // Cooldown is recorded only past this point, so a report that never
-    // reached the channel does not cost the member their next minute.
+    // A report that never reached the channel does not cost the next minute.
+    lastReportAt.delete(cooldownKey);
     return {
       error: "Failed to submit the report. Please contact a mod directly.",
     };
   }
 
-  lastReportAt.set(cooldownKey, now);
-
-  return { message: "Your report has been submitted to the moderators." };
+  return {
+    message:
+      "Your report has been sent to the moderators anonymously. They won't see who sent it.",
+  };
 }

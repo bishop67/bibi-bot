@@ -81,7 +81,12 @@ export async function executeWarn(
   if (isJailWarning(warningCount) && !staff) {
     // Checked here rather than left to jailUser: the jail role would land but
     // the roles above the bot's could not be stripped, half-jailing them.
-    if (targetMember && !targetMember.manageable) {
+    // Someone who has left has no roles to check rank or staff status
+    // against, and a jail written now would land on them when they rejoin.
+    if (!targetMember) {
+      jailNote = `
+That is warning ${warningCount}, but they are not in the server, so they were not jailed.`;
+    } else if (!targetMember.manageable) {
       jailNote = `
 That is warning ${warningCount}, but I cannot jail them: their highest role is above mine.`;
     } else {

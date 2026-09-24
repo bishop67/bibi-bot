@@ -285,7 +285,18 @@ export class DeleteUserMessagesService {
       };
     }
 
-    await discordMember.roles.remove(jailRoleId).catch(error);
+    // Checked before the DB is touched: if Discord refuses, they are still
+    // jailed, and the row must keep saying so.
+    try {
+      await discordMember.roles.remove(jailRoleId);
+    } catch (err) {
+      error(err);
+      return {
+        ok: false,
+        message:
+          "Discord refused to remove the jail role, so they are still jailed. Try again in a moment.",
+      };
+    }
 
     await db
       .delete(memberRole)

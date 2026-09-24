@@ -25,6 +25,7 @@ export class Report {
     @SlashOption({
       name: "reason",
       description: "Why are you reporting this member?",
+      maxLength: 500,
       required: true,
       type: ApplicationCommandOptionType.String,
     })

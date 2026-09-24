@@ -63,7 +63,7 @@ response would never notice.
 | -------------- | ------------------------------------------------------ | -------------------------- |
 | `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
 | `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
-| `/report`      | Report a member to the moderators                      | `user`, `reason`           |
+| `/report`      | Report a member to the moderators (posts to the mod log channel) | `user`, `reason` |
 | `/time`        | Current time around the world, or one place            | `location` (optional)      |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 
@@ -82,6 +82,8 @@ one choice, so both are always offered and validated when the command runs.
 | `/jail`            | Jail a member, optionally purging their messages | `user`, `user-id`, `reason`, `purge`, `days` |
 | `/unjail`          | Release a member from jail                       | `user`, `user-id`, `reason`                  |
 | `/delete-messages` | Bulk-delete from a channel                       | `amount`                                     |
+| `/timeout`         | Time out a member and DM them the reason         | `user`, `duration`, `reason` (optional)      |
+| `/untimeout`       | Lift a timeout                                   | `user`                                       |
 | `/logs commands`   | Command history                                  | `count` (optional)                           |
 | `/status`          | Bot CPU and memory                               |                                              |
 | `!verify-users`    | Full member resync (prefix command)              |                                              |
@@ -176,6 +178,16 @@ filters stop at the same point.
 **Warnings have one source of truth.** `MemberWarning` rows are authoritative;
 `memberGuild.warnings` is a derived counter kept in sync from them.
 
+**Every third warning jails.** At 3, 6, 9 and so on, whether the warning came
+from `/warn` or the invite filter, so a released member gets two more chances
+rather than staying one strike from jail. A jail from the invite filter also
+purges their messages; one from `/warn` does not. Staff are exempt, as above.
+
+**Timeouts are tiered.** `/timeout` is not gated on a Discord permission: the
+role check is. `STAFF_ROLES` can time out for up to 28 days, `HELPER_ROLES` for
+up to a week. Nobody can time out staff, helpers cannot time out helpers, and
+a helper can only change or lift a timeout they set themselves.
+
 ## Logging
 
 Moderation actions go to `MOD_LOG_CHANNELS` and are written to the `ModLog`
@@ -202,6 +214,7 @@ The ones worth knowing:
 | `GUILD_ID`                   | Required. Comma-separated for multiple servers.          |
 | `STATUS_ROLES`               | Needs a `jail` entry or jailing silently does nothing.   |
 | `STAFF_ROLES`                | No staff exemption from automated punishment.            |
+| `HELPER_ROLES`               | Helpers cannot use `/timeout`.                           |
 | `LOG_EXEMPT_CHANNELS`        | Everything is logged, staff channels included.           |
 | `DELETE_EXEMPT_CHANNELS`     | Jailing sweeps every channel, announcements included.    |
 | `DELETE_EXEMPT_ROLES`        | The exemption above applies to everyone, not just OGs.   |

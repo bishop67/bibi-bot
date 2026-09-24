@@ -63,7 +63,7 @@ response would never notice.
 | -------------- | ------------------------------------------------------ | -------------------------- |
 | `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
 | `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
-| `/report`      | Report a member to the moderators (posts to the mod log channel) | `user`, `reason` |
+| `/report`      | Anonymously report a member to the moderators          | `user`, `reason`           |
 | `/time`        | Current time around the world, or one place            | `location` (optional)      |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 

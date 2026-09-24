@@ -26,6 +26,7 @@ export class Warn {
     @SlashOption({
       name: "reason",
       description: "Reason for the warning",
+      maxLength: 500,
       required: true,
       type: ApplicationCommandOptionType.String,
     })

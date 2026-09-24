@@ -30,6 +30,7 @@ export class Jail {
     @SlashOption({
       name: "reason",
       description: "Reason for the jail (shown in the jail channel)",
+      maxLength: 500,
       type: ApplicationCommandOptionType.String,
       required: false,
     })

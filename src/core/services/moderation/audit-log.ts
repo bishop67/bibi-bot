@@ -1,5 +1,10 @@
 import { botLogger } from "@/lib/telemetry";
-import { AuditLogEvent, PermissionFlagsBits, type Guild } from "discord.js";
+import {
+  AuditLogEvent,
+  PermissionFlagsBits,
+  type Guild,
+  type GuildAuditLogsEntry,
+} from "discord.js";
 import { LRUCache } from "lru-cache";
 
 /**
@@ -23,14 +28,42 @@ export interface AuditActor {
   reason?: string;
 }
 
+type EntryFilter = (entry: GuildAuditLogsEntry) => boolean;
+
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Whether the bot may read the audit log here, warning once per guild and
+ * message when it may not. Every leave, role change, timeout and deletion
+ * asks, so warning each time would bury the logs.
+ */
+const missingPermissionWarned = new Set<string>();
+
+function canReadAuditLog(guild: Guild, consequence: string): boolean {
+  const key = `${guild.id}:${consequence}`;
+
+  if (guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+    missingPermissionWarned.delete(key);
+    return true;
+  }
+
+  if (!missingPermissionWarned.has(key)) {
+    missingPermissionWarned.add(key);
+    botLogger.warn(
+      `Cannot read the audit log: missing View Audit Log. ${consequence}`,
+      { guildId: guild.id },
+    );
+  }
+  return false;
+}
 
 async function lookup(
   guild: Guild,
   type: AuditLogEvent,
   targetId: string,
+  filter: EntryFilter | undefined,
 ): Promise<AuditActor | null> {
-  const logs = await guild.fetchAuditLogs({ type, limit: 5 });
+  const logs = await guild.fetchAuditLogs({ type, limit: 10 });
 
   // The target union spans every audit-loggable entity, and a few of them
   // (Invite, for one) carry no id at all, so it has to be probed rather than
@@ -43,7 +76,8 @@ async function lookup(
   const entry = logs.entries.find(
     (e) =>
       entryTargetId(e.target) === targetId &&
-      Date.now() - e.createdTimestamp < MAX_ENTRY_AGE_MS,
+      Date.now() - e.createdTimestamp < MAX_ENTRY_AGE_MS &&
+      (!filter || filter(e)),
   );
 
   if (!entry) return null;
@@ -62,6 +96,9 @@ async function lookup(
  * or was banned - only the audit log distinguishes them, so without this every
  * departure looks voluntary.
  *
+ * `filter` narrows the match when the newest entry for the member may be a
+ * different change - see findRoleChangeActor.
+ *
  * Returns null when nothing matches, which is the normal answer for a member
  * who simply left.
  */
@@ -69,21 +106,22 @@ export async function findAuditActor(
   guild: Guild,
   type: AuditLogEvent,
   targetId: string,
+  filter?: EntryFilter,
 ): Promise<AuditActor | null> {
-  if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-    botLogger.warn(
-      "Cannot read the audit log: missing View Audit Log. Kicks, bans and timeouts will be logged without a moderator or reason",
-      { guildId: guild.id },
-    );
+  if (
+    !canReadAuditLog(
+      guild,
+      "Kicks, bans, timeouts and manual jails will be logged without a moderator or reason",
+    )
+  )
     return null;
-  }
 
   try {
-    const first = await lookup(guild, type, targetId);
+    const first = await lookup(guild, type, targetId, filter);
     if (first) return first;
 
     await wait(RETRY_DELAY_MS);
-    return await lookup(guild, type, targetId);
+    return await lookup(guild, type, targetId, filter);
   } catch (e) {
     botLogger.error("Audit log lookup failed", {
       guildId: guild.id,
@@ -92,6 +130,40 @@ export async function findAuditActor(
     });
     return null;
   }
+}
+
+/**
+ * Who added or removed one specific role.
+ *
+ * A plain lookup takes the newest role update for the member, which is the
+ * wrong one whenever the bot reacts to the change: adding the jail role makes
+ * the bot strip every other role, and those removals can land on top of the
+ * moderator's entry.
+ */
+export function findRoleChangeActor(
+  guild: Guild,
+  targetId: string,
+  roleId: string,
+  change: "$add" | "$remove",
+): Promise<AuditActor | null> {
+  return findAuditActor(
+    guild,
+    AuditLogEvent.MemberRoleUpdate,
+    targetId,
+    (entry) =>
+      entry.changes.some(
+        (c) =>
+          c.key === change &&
+          Array.isArray(c.new) &&
+          c.new.some(
+            (role) =>
+              !!role &&
+              typeof role === "object" &&
+              "id" in role &&
+              role.id === roleId,
+          ),
+      ),
+  );
 }
 
 /**
@@ -132,13 +204,13 @@ export async function findMessageDeleteActor(
   channelId: string,
   authorId: string | null,
 ): Promise<MessageDeleteActor | null> {
-  if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-    botLogger.warn(
-      "Cannot read the audit log: missing View Audit Log. Deleted messages will all be logged as self-deletions",
-      { guildId: guild.id },
-    );
+  if (
+    !canReadAuditLog(
+      guild,
+      "Deleted messages will all be logged as self-deletions",
+    )
+  )
     return null;
-  }
 
   const attempt = async (): Promise<MessageDeleteActor | null> => {
     // Not limit: 1 - any unrelated delete elsewhere in the guild lands on top
@@ -220,13 +292,13 @@ export async function findBulkDeleteExecutor(
   guild: Guild,
   channelId: string,
 ): Promise<string | null> {
-  if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-    botLogger.warn(
-      "Cannot read the audit log: missing View Audit Log. Bulk deletions will be logged without naming who ran them",
-      { guildId: guild.id },
-    );
+  if (
+    !canReadAuditLog(
+      guild,
+      "Bulk deletions will be logged without naming who ran them",
+    )
+  )
     return null;
-  }
 
   const attempt = async (): Promise<string | null> => {
     const logs = await guild.fetchAuditLogs({

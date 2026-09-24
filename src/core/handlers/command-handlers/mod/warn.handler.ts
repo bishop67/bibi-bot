@@ -1,5 +1,8 @@
+import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
 import { WarningsService } from "@/core/services/moderation/warnings.service";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
+import { isJailWarning, nextJailWarning } from "@/shared/config/moderation";
+import { isStaffMember } from "@/shared/config/staff";
 import type { MessageResult } from "@/types";
 import type { CommandInteraction, User } from "discord.js";
 
@@ -25,12 +28,18 @@ export async function executeWarn(
   }
 
   // Discord gates this command on ManageRoles, which every moderator has - so
-  // without a rank check the newest of them can warn an admin, and at four
-  // warnings the automod would try to jail them.
+  // without a rank check the newest of them can warn an admin, and every third
+  // warning jails.
   const [targetMember, invoker] = await Promise.all([
     interaction.guild.members.fetch(target.id).catch(() => null),
     interaction.guild.members.fetch(interaction.user.id).catch(() => null),
   ]);
+
+  // Without the invoker's roles there is nothing to compare, and letting the
+  // warning through would let anyone reach the jail threshold on an admin.
+  if (targetMember && !invoker) {
+    return { error: "I could not check your roles, so I have not warned anyone." };
+  }
 
   if (
     targetMember &&
@@ -43,7 +52,7 @@ export async function executeWarn(
     };
   }
 
-  const { warning } = await WarningsService.addWarning({
+  const { warning, warningCount } = await WarningsService.addWarning({
     guildId: interaction.guild.id,
     memberId: target.id,
     username: target.username,
@@ -62,15 +71,65 @@ export async function executeWarn(
     reason,
   });
 
+  // Same threshold as the invite filter, since both feed one count. Staff are
+  // exempt, as with every automatic jail. No message purge: a warning for
+  // rudeness is no reason to wipe two weeks of posts.
+  const staff = isStaffMember(targetMember);
+  let jailNote = "";
+  let jailed = false;
+
+  if (isJailWarning(warningCount) && !staff) {
+    // Checked here rather than left to jailUser: the jail role would land but
+    // the roles above the bot's could not be stripped, half-jailing them.
+    // Someone who has left has no roles to check rank or staff status
+    // against, and a jail written now would land on them when they rejoin.
+    if (!targetMember) {
+      jailNote = `
+That is warning ${warningCount}, but they are not in the server, so they were not jailed.`;
+    } else if (!targetMember.manageable) {
+      jailNote = `
+That is warning ${warningCount}, but I cannot jail them: their highest role is above mine.`;
+    } else {
+      const { status } = await DeleteUserMessagesService.jailUser({
+        guild: interaction.guild,
+        memberId: target.id,
+        user: target,
+        jail: true,
+        deleteMessages: false,
+        moderatorId: interaction.user.id,
+        moderatorName: interaction.user.username,
+        reason: `Reached ${warningCount} warnings (latest: ${reason})`,
+      });
+
+      jailed = status === "jailed";
+      jailNote =
+        status === "jailed"
+          ? `
+That is warning ${warningCount}, so they have been jailed.`
+          : status === "already-jailed"
+            ? `
+That is warning ${warningCount}; they were already jailed.`
+            : `
+That is warning ${warningCount}, but this server has no jail role configured, so they were not jailed.`;
+    }
+  }
+
   try {
     await target.send(
-      `You have been warned in **${interaction.guild.name}**: ${reason}`,
+      jailed
+        ? `You have been warned in **${interaction.guild.name}**: ${reason}
+That is ${warningCount} warnings, so you have been jailed. Ask a mod to release you.`
+        : staff || isJailWarning(warningCount)
+          ? `You have been warned in **${interaction.guild.name}**: ${reason}
+Warnings: ${warningCount}.`
+          : `You have been warned in **${interaction.guild.name}**: ${reason}
+Warnings: ${warningCount}, you will be jailed at ${nextJailWarning(warningCount)}.`,
     );
   } catch {
     // user has DMs closed or has left - warning is still recorded
   }
 
   return {
-    message: `Warned ${target.username} (warning #${warning.id}): ${reason}`,
+    message: `Warned ${target.username} (warning #${warning.id}, ${warningCount} total): ${reason}${jailNote}`,
   };
 }

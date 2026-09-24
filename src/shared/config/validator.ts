@@ -66,12 +66,11 @@ export class ConfigValidator {
       keys: ["MEMBERS_COUNT_CHANNELS"],
       toggle: { key: "SHOULD_COUNT_MEMBERS", defaultOn: false },
     },
-    { feature: "Member Reports", keys: ["REPORT_CHANNELS"] },
     {
       feature: "Template Validation Notifications",
       keys: ["TEMPLATE_VALIDATION_CHANNELS"],
     },
-    { feature: "Moderation Log", keys: ["MOD_LOG_CHANNELS"] },
+    { feature: "Moderation Log & Member Reports", keys: ["MOD_LOG_CHANNELS"] },
     { feature: "Custom Bot Icon", keys: ["BOT_ICON"] },
     // Reported even though they need no configuration: these are the two
     // switches that quietly turn off the most. Without message content every

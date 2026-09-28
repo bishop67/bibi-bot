@@ -8,6 +8,7 @@ import {
   findAuditActor,
 } from "@/core/services/moderation/audit-log";
 import { ModLogService } from "@/core/services/moderation/modlog.service";
+import { MuteService } from "@/core/services/moderation/mute.service";
 import { db } from "@/lib/db";
 import { memberRole } from "@/lib/db-schema";
 import { and, eq } from "drizzle-orm";
@@ -115,6 +116,22 @@ async function logTimeoutChange(
   )
     return;
 
+  const outranked = actor?.moderatorId
+    ? await MuteService.recordMenuChange({
+        target: newMember,
+        actorId: actor.moderatorId,
+        expiresAt: isActive ? after : null,
+        reason: actor.reason,
+      })
+    : null;
+  const override = outranked
+    ? `Overrode a timeout set by <@${outranked.id}>, who outranks them.`
+    : undefined;
+
+  const reason = isActive
+    ? `${actor?.reason ?? "No reason provided"} (until <t:${Math.floor((after as number) / 1000)}:f>)`
+    : actor?.reason;
+
   await ModLogService.postLog({
     guild: newMember.guild,
     action,
@@ -123,8 +140,6 @@ async function logTimeoutChange(
     moderatorId: actor?.moderatorId,
     moderatorName: actor?.moderatorName,
     moderatorFromAuditLog: true,
-    reason: isActive
-      ? `${actor?.reason ?? "No reason provided"} (until <t:${Math.floor((after as number) / 1000)}:f>)`
-      : actor?.reason,
+    reason: [reason, override].filter(Boolean).join("\n") || undefined,
   });
 }

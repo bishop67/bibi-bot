@@ -185,8 +185,15 @@ purges their messages; one from `/warn` does not. Staff are exempt, as above.
 
 **Timeouts are tiered.** `/timeout` is not gated on a Discord permission: the
 role check is. `STAFF_ROLES` can time out for up to 28 days, `HELPER_ROLES` for
-up to a day. Nobody can time out staff, helpers cannot time out helpers, and
-a helper can only change or lift a timeout they set themselves.
+up to a day. Nobody can time out staff, and helpers cannot time out helpers.
+
+**Timeouts are protected by rank.** Changing or lifting a timeout takes the
+person who set it, or someone whose highest role sits above theirs in the
+server's role list; equal rank is not enough, and helpers never touch a staff
+timeout. The server owner outranks everyone. Timeouts set in Discord's own
+member menu are recorded too, so they are protected the same way. That menu
+cannot be blocked, so an outranked change made there goes through but is
+flagged in the mod log.
 
 ## Logging
 

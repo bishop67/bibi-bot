@@ -1,3 +1,4 @@
+import { google } from "@ai-sdk/google";
 import { tool } from "ai";
 import { z } from "zod/v4";
 import { GuildChannel, PermissionFlagsBits } from "discord.js";
@@ -194,5 +195,7 @@ export function createAiTools(requestingUserId: string) {
   return {
     searchMemeGifs,
     gatherChannelContext: createGatherChannelContext(requestingUserId),
+    // Gemini fetches linked pages itself; it runs alongside the function tools.
+    url_context: google.tools.urlContext({}),
   };
 }

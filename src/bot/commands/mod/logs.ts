@@ -5,8 +5,15 @@ import { db } from "@/lib/db";
 import { memberCommandHistory, memberDeletedMessages } from "@/lib/db-schema";
 import { desc, eq } from "drizzle-orm";
 import type { CommandInteraction } from "discord.js";
-import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
+import {
+  ApplicationCommandOptionType,
+  MessageFlags,
+  PermissionFlagsBits,
+} from "discord.js";
 import { Discord, Slash, SlashGroup, SlashOption } from "discordx";
+
+// Both replies are private: they show staff activity and deleted message
+// content, which should not land in whatever channel the command is run in.
 
 /** Command history is best-effort and must never delay the reply. */
 function record(interaction: CommandInteraction, command: string) {
@@ -46,7 +53,8 @@ export class LogsCommands {
     count: number = 10,
     interaction: CommandInteraction,
   ) {
-    if (!(await safeDeferReply(interaction))) return;
+    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] })))
+      return;
     record(interaction, "logs commands");
 
     const history = await db.query.memberCommandHistory.findMany({
@@ -76,7 +84,8 @@ export class LogsCommands {
     count: number = 10,
     interaction: CommandInteraction,
   ) {
-    if (!(await safeDeferReply(interaction))) return;
+    if (!(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] })))
+      return;
 
     // This reads the actual content of other people's deleted messages, which
     // is the most privacy-sensitive thing the bot can show. It was

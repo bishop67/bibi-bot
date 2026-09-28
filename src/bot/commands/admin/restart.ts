@@ -2,6 +2,7 @@ import { executeRestart } from "@/core/handlers/command-handlers/admin/restart.h
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
+import { isBotOwner } from "@/shared/config/roles";
 import {
   MessageFlags,
   PermissionFlagsBits,
@@ -18,10 +19,22 @@ export class Restart {
     dmPermission: false,
   })
   async restart(interaction: CommandInteraction) {
-    if (
-      !(await safeDeferReply(interaction, { flags: [MessageFlags.Ephemeral] }))
-    )
+    // The restart notice is public so the channel knows the bot is going down;
+    // a refusal stays private, so it is decided before the reply is deferred.
+    const allowed =
+      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
+      isBotOwner(interaction.user.id);
+    if (!allowed) {
+      await interaction
+        .reply({
+          content: "Only administrators can restart me.",
+          flags: [MessageFlags.Ephemeral],
+        })
+        .catch(() => {});
       return;
+    }
+
+    if (!(await safeDeferReply(interaction))) return;
 
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)

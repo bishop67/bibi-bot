@@ -35,6 +35,10 @@ const ACTION_TONES: Record<ModLogAction, LogTone> = {
   untimeout: "positive",
 };
 
+// Only who acted is shown for these: lifts need no justification, and kicks and
+// bans come from Discord's own dialog, which has no reason to rely on.
+const NO_REASON: ModLogAction[] = ["unjail", "untimeout", "kick", "ban", "unban"];
+
 const ACTION_TITLES: Record<ModLogAction, string> = {
   warn: "Member Warned",
   "edit-warning": "Warning Edited",
@@ -96,6 +100,7 @@ export class ModLogService {
     moderatorName,
     moderatorFromAuditLog,
     reason,
+    note,
   }: {
     guild: Guild;
     action: ModLogAction;
@@ -111,7 +116,11 @@ export class ModLogService {
      */
     moderatorFromAuditLog?: boolean;
     reason?: string;
+    /** Shown on its own line, even for actions that carry no reason. */
+    note?: string;
   }) {
+    if (NO_REASON.includes(action)) reason = undefined;
+
     try {
       const resolvedTargetName =
         targetName ?? (await this.resolveTargetName(guild, targetId));
@@ -144,7 +153,10 @@ export class ModLogService {
                     ? "Unknown (needs View Audit Log)"
                     : "Automod"
               }`,
-              `**Reason:** ${reason || "No reason provided"}`,
+              ...(NO_REASON.includes(action)
+                ? []
+                : [`**Reason:** ${reason || "No reason provided"}`]),
+              ...(note ? [`**Note:** ${note}`] : []),
               `-# ${targetId}`,
             ],
             footer: "mod log",

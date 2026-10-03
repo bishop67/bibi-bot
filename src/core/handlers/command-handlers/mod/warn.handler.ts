@@ -109,7 +109,10 @@ That is warning ${warningCount}, so they have been jailed.`
           : status === "already-jailed"
             ? `
 That is warning ${warningCount}; they were already jailed.`
-            : `
+            : status === "jail-role-unmanageable"
+              ? `
+That is warning ${warningCount}, but the jail role is above mine, so they were not jailed.`
+              : `
 That is warning ${warningCount}, but this server has no jail role configured, so they were not jailed.`;
     }
   }

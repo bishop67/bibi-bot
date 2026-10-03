@@ -1,4 +1,6 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { ModLogService } from "@/core/services/moderation/modlog.service";
+import { isUserId } from "@/core/utils/command.utils";
 import type { CommandResult } from "@/types";
 import type { CommandInteraction, Guild, User } from "discord.js";
 
@@ -58,6 +60,9 @@ export async function executeJail(
   if (!memberId || !interaction.guild) {
     return { success: false, error: "Invalid user or guild" };
   }
+  if (!isUserId(memberId)) {
+    return { success: false, error: "user-id must be a Discord user ID." };
+  }
 
   const refusal = await refuseByRank(
     interaction.guild,
@@ -85,13 +90,21 @@ export async function executeJail(
   // Deliberately not marked `automated`, so a moderator can still jail a
   // staff member by hand even though the filters never will - subject to
   // outranking them, which refuseByRank has already established.
-  const { status } = await DeleteUserMessagesService.jailUser(params);
+  const { status, log } = await DeleteUserMessagesService.jailUser(params);
 
   if (status === "no-jail-role") {
     return {
       success: false,
       error:
         "This server has no jail role configured (check STATUS_ROLES), so nobody was jailed.",
+    };
+  }
+
+  if (status === "jail-role-unmanageable") {
+    return {
+      success: false,
+      error:
+        "I cannot manage the jail role - it sits above my highest role, so nobody was jailed.",
     };
   }
 
@@ -109,7 +122,12 @@ export async function executeJail(
     return { success: true, message: "User jailed. No messages were deleted." };
   }
 
-  DeleteUserMessagesService.deleteUserMessages(params).catch(() => {});
+  DeleteUserMessagesService.deleteUserMessages(params)
+    .then(
+      (amount) =>
+        log && ModLogService.addDeletedCount(interaction.guild!, log, amount),
+    )
+    .catch(() => {});
 
   const window = `last ${days ?? 14} day${(days ?? 14) === 1 ? "" : "s"}`;
 

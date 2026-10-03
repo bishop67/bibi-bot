@@ -12,6 +12,10 @@ export const UNKNOWN_MESSAGE = 10008;
 export const UNKNOWN_CHANNEL = 10003;
 export const UNKNOWN_INTERACTION = 10062;
 
+// A typed user-id is free text; anything that is not a snowflake would be
+// jailed or released as a member row that matches nobody.
+export const isUserId = (value: string) => /^\d{17,20}$/.test(value);
+
 export function isDiscordNotFoundError(error: unknown): boolean {
   const code = (error as { code?: number }).code;
   return (

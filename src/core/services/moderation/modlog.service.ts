@@ -18,7 +18,8 @@ export type ModLogAction =
   | "ban"
   | "unban"
   | "timeout"
-  | "untimeout";
+  | "untimeout"
+  | "purge";
 
 // Severity, so a ban and an unban are not the same colour in the scrollback.
 const ACTION_TONES: Record<ModLogAction, LogTone> = {
@@ -33,11 +34,20 @@ const ACTION_TONES: Record<ModLogAction, LogTone> = {
   unban: "positive",
   timeout: "caution",
   untimeout: "positive",
+  purge: "negative",
 };
 
-// Only who acted is shown for these: lifts need no justification, and kicks and
-// bans come from Discord's own dialog, which has no reason to rely on.
-const NO_REASON: ModLogAction[] = ["unjail", "untimeout", "kick", "ban", "unban"];
+// Only who acted is shown for these: lifts need no justification, kicks and
+// bans come from Discord's own dialog, which has no reason to rely on, and
+// /delete-messages takes no reason.
+const NO_REASON: ModLogAction[] = [
+  "unjail",
+  "untimeout",
+  "kick",
+  "ban",
+  "unban",
+  "purge",
+];
 
 const ACTION_TITLES: Record<ModLogAction, string> = {
   warn: "Member Warned",
@@ -51,7 +61,10 @@ const ACTION_TITLES: Record<ModLogAction, string> = {
   timeout: "Member Timed Out",
   untimeout: "Timeout Removed",
   unjail: "Member Unjailed",
+  purge: "Messages Purged",
 };
+
+const deletedLine = (amount: number) => `**Messages deleted:** ${amount}`;
 
 /**
  * Single entry point for all moderation logging. Every mod action that
@@ -101,9 +114,15 @@ export class ModLogService {
     moderatorFromAuditLog,
     reason,
     note,
+    amount,
+    purgedChannelId,
   }: {
     guild: Guild;
     action: ModLogAction;
+    /**
+     * A member, as ModLog has a foreign key to Member. A channel purge has no
+     * member to name, so it passes the moderator here and the channel below.
+     */
     targetId: string;
     targetName?: string;
     /** Needed for kicks and bans: the member is gone from cache by then. */
@@ -118,6 +137,10 @@ export class ModLogService {
     reason?: string;
     /** Shown on its own line, even for actions that carry no reason. */
     note?: string;
+    /** How many messages were deleted, for purges. */
+    amount?: number;
+    /** The channel a purge cleared; replaces the member line. */
+    purgedChannelId?: string;
   }) {
     if (NO_REASON.includes(action)) reason = undefined;
 
@@ -142,10 +165,14 @@ export class ModLogService {
         if (logChannel?.isTextBased()) {
           const embed: APIEmbed = logEmbed({
             tone: ACTION_TONES[action],
-            user: targetUser ?? guild.members.cache.get(targetId)?.user ?? null,
+            user: purgedChannelId
+              ? null
+              : (targetUser ?? guild.members.cache.get(targetId)?.user ?? null),
             title: ACTION_TITLES[action],
             lines: [
-              `<@${targetId}> (${resolvedTargetName})`,
+              purgedChannelId
+                ? `<#${purgedChannelId}>`
+                : `<@${targetId}> (${resolvedTargetName})`,
               `**Moderator:** ${
                 moderatorId
                   ? `<@${moderatorId}> (${moderatorName ?? "unknown"})`
@@ -156,8 +183,9 @@ export class ModLogService {
               ...(NO_REASON.includes(action)
                 ? []
                 : [`**Reason:** ${reason || "No reason provided"}`]),
+              ...(amount !== undefined ? [deletedLine(amount)] : []),
               ...(note ? [`**Note:** ${note}`] : []),
-              `-# ${targetId}`,
+              `-# ${purgedChannelId ?? targetId}`,
             ],
             footer: "mod log",
           });
@@ -204,6 +232,41 @@ export class ModLogService {
       // Member table, a transient DB error, etc.) - log and move on.
       console.error("[ModLogService] postLog failed:", err);
       return null;
+    }
+  }
+
+  /**
+   * Add the sweep's count to a jail entry that was posted before the sweep
+   * ran. The jail is logged first so a restart mid-sweep still leaves a
+   * record; the count follows once it is known. Best-effort, like the post.
+   */
+  static async addDeletedCount(
+    guild: Guild,
+    entry: { channelId: string | null; logMessageId: string | null },
+    amount: number,
+  ) {
+    if (!entry.channelId || !entry.logMessageId) return;
+
+    try {
+      const channel = guild.channels.cache.get(entry.channelId);
+      if (!channel?.isTextBased()) return;
+
+      const message = await channel.messages.fetch(entry.logMessageId);
+      const embed = message.embeds[0]?.toJSON();
+      if (!embed?.description) return;
+
+      // Above the trailing "-# id" line, where the other details sit.
+      const lines = embed.description.split("\n");
+      const footer = lines.at(-1)?.startsWith("-# ") ? lines.pop() : undefined;
+      lines.push(deletedLine(amount));
+      if (footer) lines.push(footer);
+
+      await message.edit({
+        embeds: [{ ...embed, description: lines.join("\n") }],
+        allowedMentions: { users: [], roles: [] },
+      });
+    } catch (err) {
+      console.error("[ModLogService] addDeletedCount failed:", err);
     }
   }
 }

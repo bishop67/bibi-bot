@@ -1,4 +1,5 @@
 import { DeleteUserMessagesService } from "@/core/services/messages/delete-user-messages.service";
+import { isUserId } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { modLog } from "@/lib/db-schema";
 import type { CommandResult } from "@/types";
@@ -78,6 +79,9 @@ export async function executeUnjail(
   const memberId = user?.id ?? userId;
   if (!memberId || !interaction.guild) {
     return { success: false, error: "Invalid user or guild" };
+  }
+  if (!isUserId(memberId)) {
+    return { success: false, error: "user-id must be a Discord user ID." };
   }
 
   const refusal = await refuseByJailerRank(

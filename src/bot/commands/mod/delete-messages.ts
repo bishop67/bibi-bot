@@ -52,6 +52,6 @@ export class DeleteMessages {
       return;
     }
 
-    await safeEditReply(interaction, { content: "messages are deleted" });
+    await safeEditReply(interaction, { content: result.message });
   }
 }

@@ -66,13 +66,19 @@ export class DeleteUserMessagesService {
   static async jailAndDeleteMessages(params: DeleteUserMessagesParams) {
     if (params.automated && (await this.isAutoJailExempt(params))) return;
 
-    // A missing jail role still lets the sweep run: the filters decided this
-    // member is spamming, and removing the spam does not need the role.
-    const { status } = await this.jailUser(params);
+    // A missing or unmanageable jail role still lets the sweep run: the filters
+    // decided this member is spamming, and removing the spam does not need it.
+    const { status, log: jailLog } = await this.jailUser(params);
     if (status === "already-jailed") return;
 
     if (params.deleteMessages === false) return;
-    this.deleteUserMessages(params).catch(error);
+    this.deleteUserMessages(params)
+      .then(
+        (amount) =>
+          jailLog &&
+          ModLogService.addDeletedCount(params.guild, jailLog, amount),
+      )
+      .catch(error);
   }
 
   /**
@@ -115,11 +121,15 @@ export class DeleteUserMessagesService {
    * unrecoverably. Refusing is the only outcome consistent with the first
    * jail; to widen the deletion window, unjail first.
    *
-   * "no-jail-role" means nothing happened, and callers must not report a jail.
+   * "no-jail-role" and "jail-role-unmanageable" mean nothing happened, and
+   * callers must not report a jail. `log` is the jail's mod log entry, so the
+   * caller can add the sweep's count to it.
    */
-  static async jailUser(
-    params: DeleteUserMessagesParams,
-  ): Promise<{ status: "jailed" | "already-jailed" | "no-jail-role" }> {
+  static async jailUser(params: DeleteUserMessagesParams): Promise<{
+    status:
+      "jailed" | "already-jailed" | "no-jail-role" | "jail-role-unmanageable";
+    log?: Awaited<ReturnType<typeof ModLogService.postLog>>;
+  }> {
     const jailRoleId = RolesService.getGuildStatusRoles(params.guild)[JAIL]?.id;
 
     // Returning quietly here means a spammer the filters already decided to
@@ -152,6 +162,21 @@ export class DeleteUserMessagesService {
       return { status: "already-jailed" };
     }
 
+    // A jail role above the bot's own cannot be handed out, so going on would
+    // record and announce a jail the member never receives.
+    const role = params.guild.roles.cache.get(jailRoleId);
+    if (!role?.editable) {
+      botLogger.error(
+        "Cannot jail member: the jail role sits above the bot's highest role",
+        {
+          guildId: params.guild.id,
+          memberId: params.memberId,
+          reason: params.reason,
+        },
+      );
+      return { status: "jail-role-unmanageable" };
+    }
+
     // Read before the role is applied: adding it makes the status-role handler
     // strip every other role they hold.
     await this.captureDeleteExemption(params);
@@ -182,11 +207,9 @@ export class DeleteUserMessagesService {
       });
     });
 
-    const role = params.guild.roles.cache.get(jailRoleId);
-    if (discordMember && role?.editable)
-      await discordMember.roles.add(jailRoleId).catch(error);
+    if (discordMember) await discordMember.roles.add(jailRoleId).catch(error);
 
-    await ModLogService.postLog({
+    const log = await ModLogService.postLog({
       guild: params.guild,
       action: "jail",
       targetId: params.memberId,
@@ -198,7 +221,7 @@ export class DeleteUserMessagesService {
 
     await this.sendJailNotification(params);
 
-    return { status: "jailed" };
+    return { status: "jailed", log };
   }
 
   /**
@@ -538,6 +561,7 @@ export class DeleteUserMessagesService {
           ? ` (skipped ${skippedChannels} protected channel${skippedChannels === 1 ? "" : "s"})`
           : ""),
     );
+    return totalDeleted;
   }
 
   private static async sendJailNotification(params: {

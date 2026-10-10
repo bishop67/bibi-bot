@@ -66,7 +66,6 @@ export class ConfigValidator {
       keys: ["MEMBERS_COUNT_CHANNELS"],
       toggle: { key: "SHOULD_COUNT_MEMBERS", defaultOn: false },
     },
-    { feature: "Member Reports", keys: ["REPORT_CHANNELS"] },
     {
       feature: "Template Validation Notifications",
       keys: ["TEMPLATE_VALIDATION_CHANNELS"],

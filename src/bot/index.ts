@@ -22,26 +22,22 @@ import "./commands/admin/restart";
 import "./commands/admin/troll-move-user";
 
 // Commands - Mod
-import "./commands/mod/clear-warnings";
 import "./commands/mod/delete-member-db";
 import "./commands/mod/delete-messages";
 import "./commands/mod/jail";
 import "./commands/mod/unjail";
-import "./commands/mod/delete-warning";
-import "./commands/mod/edit-warning";
 import "./commands/mod/logs";
 import "./commands/mod/lookback-members";
-import "./commands/mod/status";
+import "./commands/mod/server";
 import "./commands/mod/timeout";
-import "./commands/mod/top-warnings";
 import "./commands/mod/untimeout";
 import "./commands/mod/verify-users";
 import "./commands/mod/backfill-messages";
 import "./commands/mod/warn";
-import "./commands/mod/warnings";
 
 // Commands - User
 import "./commands/user/lookback-me";
-import "./commands/user/stats";
-import "./commands/user/report";
-import "./commands/user/time";
+import "./commands/user/me";
+import "./commands/user/members";
+import "./commands/user/top";
+import "./commands/user/user";

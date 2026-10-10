@@ -6,14 +6,14 @@ import { PermissionFlagsBits, type CommandInteraction } from "discord.js";
 import { Discord, Slash } from "discordx";
 
 @Discord()
-export class StatusCommand {
+export class ServerCommand {
   @Slash({
-    name: "status",
-    description: "Displays bot CPU and RAM usage in detail.",
+    name: "server",
+    description: "Bot server stats: CPU, memory and latency",
     defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
     dmPermission: false,
   })
-  async status(interaction: CommandInteraction) {
+  async server(interaction: CommandInteraction) {
     if (!(await safeDeferReply(interaction))) return;
 
     if (interaction.member?.user.id && interaction.guildId) {
@@ -22,7 +22,7 @@ export class StatusCommand {
           channelId: interaction.channelId,
           memberId: interaction.member.user.id,
           guildId: interaction.guildId,
-          command: "status",
+          command: "server",
         })
         .catch(() => {});
     }

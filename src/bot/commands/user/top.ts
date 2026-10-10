@@ -1,48 +1,50 @@
-import { executeTopWarnings } from "@/core/handlers/command-handlers/mod/top-warnings.handler";
+import type { CommandInteraction } from "discord.js";
+import { ApplicationCommandOptionType } from "discord.js";
+import { Discord, Slash, SlashOption } from "discordx";
+import { executeTopCommand } from "@/core/handlers/command-handlers/user/top.handler";
 import { safeDeferReply, safeEditReply } from "@/core/utils/command.utils";
 import { db } from "@/lib/db";
 import { memberCommandHistory } from "@/lib/db-schema";
-import type { CommandInteraction } from "discord.js";
-import { ApplicationCommandOptionType, PermissionFlagsBits } from "discord.js";
-import { Discord, Slash, SlashOption } from "discordx";
 
 @Discord()
-export class TopWarnings {
+export class TopCommand {
   @Slash({
-    name: "top-warnings",
-    description: "Leaderboard of the most warned members",
-    defaultMemberPermissions: PermissionFlagsBits.ManageRoles,
+    name: "top",
+    description: "Get top stats for the guild",
     dmPermission: false,
   })
-  async topWarnings(
+  async top(
     @SlashOption({
-      name: "page",
-      description: "Page number (default 1)",
+      name: "lookback",
+      description: "Lookback days",
       required: false,
       minValue: 1,
+      maxValue: 9999,
       type: ApplicationCommandOptionType.Integer,
     })
-    page: number = 1,
+    lookback: number = 9999,
     interaction: CommandInteraction,
   ) {
     if (!(await safeDeferReply(interaction))) return;
-
     if (interaction.member?.user.id && interaction.guildId) {
       db.insert(memberCommandHistory)
         .values({
           channelId: interaction.channelId,
           memberId: interaction.member.user.id,
           guildId: interaction.guildId,
-          command: "top-warnings",
+          command: "top",
         })
         .catch(() => {});
     }
 
-    const result = await executeTopWarnings(interaction, page);
+    const result = await executeTopCommand(interaction, lookback);
 
-    if ("error" in result) return safeEditReply(interaction, result.error);
+    if ("error" in result) {
+      await safeEditReply(interaction, result.error);
+      return;
+    }
 
-    return safeEditReply(interaction, {
+    await safeEditReply(interaction, {
       embeds: [result.embed],
       allowedMentions: { users: [], roles: [] },
     });

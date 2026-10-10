@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { APIEmbed } from "discord.js";
 import { UserStatsExampleEmbed } from "@/types";
-import { BOT_ICON, RED_COLOR, STATS_TEMPLATE } from "@/shared/config/branding";
+import { botIcon, RED_COLOR, STATS_TEMPLATE } from "@/shared/config/branding";
 import { codeString } from "@/shared/utils/format.utils";
 
 export const userStatsExampleEmbed = (
@@ -95,7 +95,7 @@ __${args.lookback} Days__: ${lookbackVoiceSumString}
     timestamp: new Date().toISOString(),
     footer: {
       text: STATS_TEMPLATE,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };

@@ -61,31 +61,24 @@ response would never notice.
 
 | Command        | Description                                            | Options                    |
 | -------------- | ------------------------------------------------------ | -------------------------- |
-| `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
-| `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
-| `/report`      | Anonymously report a member to the moderators          | `user`, `reason`           |
-| `/time`        | Current time around the world, or one place            | `location` (optional)      |
+| `/me`          | Your own stats                                         |                            |
+| `/user`        | Another member's stats                                 | `user`                     |
+| `/top`         | Guild leaderboard                                      | `lookback` (optional)      |
+| `/members`     | Member flow and count                                  |                            |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
-
-`/stats` takes a `type` of `me`, `member`, `top` or `members`. `user` applies
-only to `member` and `lookback` only to `top` — Discord cannot tie an option to
-one choice, so both are always offered and validated when the command runs.
 
 ### Moderator (Manage Roles)
 
 | Command            | Description                                      | Options                                      |
 | ------------------ | ------------------------------------------------ | -------------------------------------------- |
 | `/warn`            | Warn a member                                    | `user`, `reason`                             |
-| `/delete-warning`  | Delete one warning by ID                         | `warning_id`                                 |
-| `/edit-warning`    | Change a warning's reason                        | `warning_id`, `new_reason`                   |
-| `/top-warnings`    | Most-warned leaderboard                          | `page` (optional)                            |
 | `/jail`            | Jail a member, optionally purging their messages | `user`, `user-id`, `reason`, `purge`, `days` |
 | `/unjail`          | Release a member from jail                       | `user`, `user-id`, `reason`                  |
 | `/delete-messages` | Bulk-delete from a channel                       | `amount`                                     |
 | `/timeout`         | Time out a member and DM them the reason         | `user`, `duration`, `reason` (optional)      |
 | `/untimeout`       | Lift a timeout                                   | `user`                                       |
 | `/logs commands`   | Command history                                  | `count` (optional)                           |
-| `/status`          | Bot CPU and memory                               |                                              |
+| `/server`          | Bot server CPU, memory and latency               |                                              |
 | `!verify-users`    | Full member resync (prefix command)              |                                              |
 
 ### Administrator
@@ -93,7 +86,6 @@ one choice, so both are always offered and validated when the command runs.
 | Command              | Description                                | Options                    |
 | -------------------- | ------------------------------------------ | -------------------------- |
 | `!backfill-messages` | Import existing message history (prefix)   | `--reset`                  |
-| `/clear-warnings`    | Wipe a member's warnings                   | `user`                     |
 | `/logs deleted`      | Deleted message content                    | `count` (optional)         |
 | `/lookback-members`  | Change the guild-wide lookback range       | `lookback`                 |
 | `/delete-member-db`  | Remove a member from the database          | `user`                     |

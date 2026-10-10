@@ -1,4 +1,4 @@
-import { BOT_ICON } from "@/shared/config/branding";
+import { botIcon } from "@/shared/config/branding";
 import type { APIEmbed, User } from "discord.js";
 
 /**
@@ -42,6 +42,6 @@ export function logEmbed(params: {
       : undefined,
     description: [`**${params.title}**`, ...body].join("\n"),
     timestamp: new Date().toISOString(),
-    footer: { text: params.footer, icon_url: BOT_ICON },
+    footer: { text: params.footer, icon_url: botIcon() },
   };
 }

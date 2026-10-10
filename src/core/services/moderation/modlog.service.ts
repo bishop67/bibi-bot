@@ -9,9 +9,6 @@ import type { APIEmbed, Guild, TextChannel, User } from "discord.js";
 
 export type ModLogAction =
   | "warn"
-  | "edit-warning"
-  | "delete-warning"
-  | "clear-warnings"
   | "jail"
   | "unjail"
   | "kick"
@@ -24,9 +21,6 @@ export type ModLogAction =
 // Severity, so a ban and an unban are not the same colour in the scrollback.
 const ACTION_TONES: Record<ModLogAction, LogTone> = {
   warn: "caution",
-  "edit-warning": "neutral",
-  "delete-warning": "neutral",
-  "clear-warnings": "neutral",
   jail: "negative",
   unjail: "positive",
   kick: "negative",
@@ -51,9 +45,6 @@ const NO_REASON: ModLogAction[] = [
 
 const ACTION_TITLES: Record<ModLogAction, string> = {
   warn: "Member Warned",
-  "edit-warning": "Warning Edited",
-  "delete-warning": "Warning Deleted",
-  "clear-warnings": "Warnings Cleared",
   jail: "Member Jailed",
   kick: "Member Kicked",
   ban: "Member Banned",
@@ -87,8 +78,8 @@ export class ModLogService {
 
   /**
    * Best-effort resolution of a display name for the log embed when the
-   * caller only has an ID (e.g. edit-warning/delete-warning only receive a
-   * warning ID, not the target user). Cache -> DB -> raw ID, in that order.
+   * caller only has an ID (e.g. a member who has already left).
+   * Cache -> DB -> raw ID, in that order.
    */
   private static async resolveTargetName(guild: Guild, targetId: string) {
     const cached = guild.members.cache.get(targetId);

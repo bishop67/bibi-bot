@@ -45,8 +45,8 @@ Covers everything changed on `main` up to `83856b4`.
 
 ## 5. Commands
 
-- [ ] **5a** Picker as HEX4-only → **no** `/status`
-- [ ] **5b** Picker as Moderator → `/status` visible and works
+- [ ] **5a** Picker as HEX4-only → **no** `/server`
+- [ ] **5b** Picker as Moderator → `/server` visible and works
 - [ ] **5c** `/stats` each `type` → all four render; `members` includes the chart
 - [ ] **5d** `/stats type:member` with no user → "Pick someone with the `user` option…"
 - [ ] **5e** `/stats type:top lookback:30` → honours the window

@@ -11,6 +11,7 @@ import {
   BACKGROUND_WORKERS_ENABLED,
   PRIVILEGED_INTENTS_ENABLED,
 } from "@/shared/config/features";
+import { setBotUser } from "@/shared/config/branding";
 import { validateGuildConfig } from "@/shared/config/guild-validator";
 import { ConfigValidator } from "@/shared/config/validator";
 import { ActivityType, GatewayIntentBits, Options, Partials } from "discord.js";
@@ -77,6 +78,7 @@ export const bot = new Client({
 });
 
 bot.once("clientReady", async () => {
+  setBotUser(bot.user);
   await bot.initApplicationCommands();
   if (BACKGROUND_WORKERS_ENABLED) {
     MemberUpdateQueueService.start();

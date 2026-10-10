@@ -65,7 +65,6 @@ response would never notice.
 | `/user`        | Another member's stats                                 | `user`                     |
 | `/top`         | Guild leaderboard                                      | `lookback` (optional)      |
 | `/members`     | Member flow and count                                  |                            |
-| `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 
 ### Moderator (Manage Roles)
@@ -73,9 +72,6 @@ response would never notice.
 | Command            | Description                                      | Options                                      |
 | ------------------ | ------------------------------------------------ | -------------------------------------------- |
 | `/warn`            | Warn a member                                    | `user`, `reason`                             |
-| `/delete-warning`  | Delete one warning by ID                         | `warning_id`                                 |
-| `/edit-warning`    | Change a warning's reason                        | `warning_id`, `new_reason`                   |
-| `/top-warnings`    | Most-warned leaderboard                          | `page` (optional)                            |
 | `/jail`            | Jail a member, optionally purging their messages | `user`, `user-id`, `reason`, `purge`, `days` |
 | `/unjail`          | Release a member from jail                       | `user`, `user-id`, `reason`                  |
 | `/delete-messages` | Bulk-delete from a channel                       | `amount`                                     |
@@ -90,7 +86,6 @@ response would never notice.
 | Command              | Description                                | Options                    |
 | -------------------- | ------------------------------------------ | -------------------------- |
 | `!backfill-messages` | Import existing message history (prefix)   | `--reset`                  |
-| `/clear-warnings`    | Wipe a member's warnings                   | `user`                     |
 | `/logs deleted`      | Deleted message content                    | `count` (optional)         |
 | `/lookback-members`  | Change the guild-wide lookback range       | `lookback`                 |
 | `/delete-member-db`  | Remove a member from the database          | `user`                     |

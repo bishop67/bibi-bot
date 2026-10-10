@@ -84,7 +84,7 @@ response would never notice.
 | `/timeout`         | Time out a member and DM them the reason         | `user`, `duration`, `reason` (optional)      |
 | `/untimeout`       | Lift a timeout                                   | `user`                                       |
 | `/logs commands`   | Command history                                  | `count` (optional)                           |
-| `/status`          | Bot CPU and memory                               |                                              |
+| `/server`          | Bot server CPU, memory and latency               |                                              |
 | `!verify-users`    | Full member resync (prefix command)              |                                              |
 
 ### Administrator

@@ -5,7 +5,7 @@ import type { memberCommandHistory } from "@/lib/db-schema";
 
 type MemberCommandHistory = InferSelectModel<typeof memberCommandHistory>;
 import {
-  BOT_ICON,
+  botIcon,
   COMMAND_HISTORY_TEMPLATE,
   RED_COLOR,
 } from "@/shared/config/branding";
@@ -31,7 +31,7 @@ ${historyText.join("\n")}
     timestamp: new Date().toISOString(),
     footer: {
       text: COMMAND_HISTORY_TEMPLATE,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };

@@ -1,9 +1,5 @@
 import type { APIEmbed } from "discord.js";
-import {
-  BOT_ICON,
-  MEMBERS_TEMPLATE,
-  RED_COLOR,
-} from "@/shared/config/branding";
+import { botIcon, MEMBERS_TEMPLATE, RED_COLOR } from "@/shared/config/branding";
 import { codeString } from "@/shared/utils/format.utils";
 import type { GuildMemberCountChart } from "@/types";
 
@@ -37,6 +33,6 @@ Change: ${formatChange(chart.sevedDaysCount!, sevenDaysPercent)}
 Change: ${formatChange(chart.oneDayCount!, oneDayPercent)}`,
     timestamp: new Date().toISOString(),
     image: { url: `attachment://${chart.fileName}` },
-    footer: { text: MEMBERS_TEMPLATE, icon_url: BOT_ICON },
+    footer: { text: MEMBERS_TEMPLATE, icon_url: botIcon() },
   };
 }

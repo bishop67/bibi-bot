@@ -5,7 +5,7 @@ import type { memberDeletedMessages } from "@/lib/db-schema";
 
 type MemberDeletedMessages = InferSelectModel<typeof memberDeletedMessages>;
 import {
-  BOT_ICON,
+  botIcon,
   DELETED_MESSAGES_HISTORY_TEMPLATE,
   RED_COLOR,
 } from "@/shared/config/branding";
@@ -31,7 +31,7 @@ ${historyText.join("\n")}
     timestamp: new Date().toISOString(),
     footer: {
       text: DELETED_MESSAGES_HISTORY_TEMPLATE,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };

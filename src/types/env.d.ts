@@ -33,7 +33,6 @@ interface FeatureBotEnvironment {
   DELETE_EXEMPT_CHANNELS: string;
   DELETE_NEVER_CHANNELS: string;
   MEMBERS_COUNT_CHANNELS: string;
-  REPORT_CHANNELS: string;
 
   // Behavior Control Features
   IS_CONSTRAINED_TO_BOT_CHANNEL: string;
@@ -52,9 +51,6 @@ interface FeatureBotEnvironment {
 
   // ModLog
   MOD_LOG_CHANNELS: string;
-
-  // Appearance Features
-  BOT_ICON: string;
 }
 
 // Combined environment interface

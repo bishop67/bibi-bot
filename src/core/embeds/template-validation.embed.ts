@@ -1,6 +1,6 @@
 import type { APIEmbed } from "discord.js";
 import {
-  BOT_ICON,
+  botIcon,
   RED_COLOR,
   YELLOW_COLOR,
   GREEN_COLOR,
@@ -216,7 +216,7 @@ export const templateValidationDmEmbed = (
     timestamp: new Date().toISOString(),
     footer: {
       text: board.label,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };
@@ -269,7 +269,7 @@ export const templateValidationNotificationEmbed = (
     timestamp: new Date().toISOString(),
     footer: {
       text: board.label,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };

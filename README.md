@@ -66,7 +66,6 @@ response would never notice.
 | `/top`         | Guild leaderboard                                      | `lookback` (optional)      |
 | `/members`     | Member flow and count                                  |                            |
 | `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
-| `/report`      | Anonymously report a member to the moderators          | `user`, `reason`           |
 | `/time`        | Current time around the world, or one place            | `location` (optional)      |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
 

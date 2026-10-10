@@ -46,5 +46,4 @@ import "./commands/user/me";
 import "./commands/user/members";
 import "./commands/user/top";
 import "./commands/user/user";
-import "./commands/user/report";
 import "./commands/user/time";

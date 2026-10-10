@@ -54,14 +54,14 @@ export async function handleThreadCreate(
     if (!isValid) return;
   }
 
-  if (newlyCreated) {
+  const welcome = newlyCreated
+    ? getThreadWelcomeMessage(threadType, thread.id, thread.name)
+    : null;
+
+  if (welcome) {
     try {
       const embed = simpleEmbedExample();
-      embed.description = getThreadWelcomeMessage(
-        threadType,
-        thread.id,
-        thread.name,
-      );
+      embed.description = welcome;
       embed.footer!.text = threadType;
 
       await thread.send({

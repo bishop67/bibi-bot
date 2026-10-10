@@ -13,14 +13,16 @@ export const BOT_ICON =
   process.env.BOT_ICON?.trim() || "https://via.placeholder.com/32";
 
 // Bot messages
-const CODING_RESPONSE =
-  "Found this helpful? React with 🔼 to give the helper credit.";
 
+/**
+ * Help threads get no welcome post: reacting with 🔼 still credits the
+ * helper, it just is not announced in every thread.
+ */
 export function getThreadWelcomeMessage(
   boardType: string,
   threadId: string,
   threadName: string,
-): string {
+): string | null {
   switch (boardType) {
     case "job-board":
       return `Good luck finding the right candidate! :four_leaf_clover:`;
@@ -29,6 +31,6 @@ export function getThreadWelcomeMessage(
     case "showcase":
       return `Thanks for sharing your project! :star2:`;
     default:
-      return `${CODING_RESPONSE}`;
+      return null;
   }
 }

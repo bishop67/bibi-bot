@@ -31,7 +31,7 @@ import "./commands/mod/delete-warning";
 import "./commands/mod/edit-warning";
 import "./commands/mod/logs";
 import "./commands/mod/lookback-members";
-import "./commands/mod/status";
+import "./commands/mod/server";
 import "./commands/mod/timeout";
 import "./commands/mod/top-warnings";
 import "./commands/mod/untimeout";

@@ -1,7 +1,7 @@
 import { APIEmbed } from "discord.js";
 import { ToptatsExampleEmbed } from "@/types";
 import {
-  BOT_ICON,
+  botIcon,
   RED_COLOR,
   TOP_STATS_TEMPLATE,
 } from "@/shared/config/branding";
@@ -103,7 +103,7 @@ ${mostActiveVoiceUsersString.join("\n")}
     timestamp: new Date().toISOString(),
     footer: {
       text: TOP_STATS_TEMPLATE,
-      icon_url: BOT_ICON,
+      icon_url: botIcon(),
     },
   };
 };

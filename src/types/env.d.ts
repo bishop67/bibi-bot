@@ -51,9 +51,6 @@ interface FeatureBotEnvironment {
 
   // ModLog
   MOD_LOG_CHANNELS: string;
-
-  // Appearance Features
-  BOT_ICON: string;
 }
 
 // Combined environment interface

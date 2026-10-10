@@ -71,7 +71,6 @@ export class ConfigValidator {
       keys: ["TEMPLATE_VALIDATION_CHANNELS"],
     },
     { feature: "Moderation Log", keys: ["MOD_LOG_CHANNELS"] },
-    { feature: "Custom Bot Icon", keys: ["BOT_ICON"] },
     // Reported even though they need no configuration: these are the two
     // switches that quietly turn off the most. Without message content every
     // filter reports clean on everything, and without the workers member data

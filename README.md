@@ -61,15 +61,14 @@ response would never notice.
 
 | Command        | Description                                            | Options                    |
 | -------------- | ------------------------------------------------------ | -------------------------- |
-| `/stats`       | Server and member statistics                           | `type`, `user`, `lookback` |
+| `/me`          | Your own stats                                         |                            |
+| `/user`        | Another member's stats                                 | `user`                     |
+| `/top`         | Guild leaderboard                                      | `lookback` (optional)      |
+| `/members`     | Member flow and count                                  |                            |
 | `/warnings`    | Your warnings — or another member's, with Manage Roles | `user`, `page` (optional)  |
 | `/report`      | Anonymously report a member to the moderators          | `user`, `reason`           |
 | `/time`        | Current time around the world, or one place            | `location` (optional)      |
 | `/lookback-me` | Change your own lookback range                         | `lookback`                 |
-
-`/stats` takes a `type` of `me`, `member`, `top` or `members`. `user` applies
-only to `member` and `lookback` only to `top` — Discord cannot tie an option to
-one choice, so both are always offered and validated when the command runs.
 
 ### Moderator (Manage Roles)
 
